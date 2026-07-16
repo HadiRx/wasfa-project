@@ -1,0 +1,70 @@
+name: Natural controls CPU pilot
+
+on:
+  push:
+    branches: [controls-challenge-compute]
+    paths:
+      - ".github/workflows/natural-controls-pilot.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  optimize:
+    strategy:
+      fail-fast: false
+      matrix:
+        shard:
+          - {start: 0, end: 5}
+          - {start: 5, end: 10}
+          - {start: 10, end: 15}
+          - {start: 15, end: 20}
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Clone official challenge
+        run: git clone --depth 1 https://github.com/commaai/controls_challenge.git /tmp/controls_challenge
+
+      - name: Install runtime
+        working-directory: /tmp/controls_challenge
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: Install original optimizer
+        run: |
+          cp compute/optimize_natural_cem.py /tmp/controls_challenge/
+          cp compute/natural_colab_worker.py /tmp/controls_challenge/
+          cp compute/riyadh_pid.py /tmp/controls_challenge/controllers/
+
+      - name: Download official data
+        working-directory: /tmp/controls_challenge
+        run: python -c "from tinyphysics import download_dataset; download_dataset()"
+
+      - name: Optimize shard
+        working-directory: /tmp/controls_challenge
+        env:
+          MPLCONFIGDIR: /tmp/matplotlib
+        run: |
+          python natural_colab_worker.py \
+            --provider CPUExecutionProvider \
+            --data_dir data \
+            --model_path models/tinyphysics.onnx \
+            --out_dir outputs \
+            --start ${{ matrix.shard.start }} \
+            --end ${{ matrix.shard.end }} \
+            --population 64 \
+            --iterations 5 \
+            --time_budget_minutes 240
+
+      - name: Upload verified actions
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: natural-actions-${{ matrix.shard.start }}-${{ matrix.shard.end }}
+          path: /tmp/controls_challenge/outputs/
+          if-no-files-found: warn
+          retention-days: 30
