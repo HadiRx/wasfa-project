@@ -42,7 +42,7 @@ jobs:
           cache: pip
 
       - name: Install CPU runtime
-        run: python -m pip install --upgrade pip pandas numpy onnxruntime
+        run: python -m pip install --upgrade pip pandas numpy onnxruntime matplotlib seaborn tqdm
 
       - name: Prepare official data and verified checkpoint
         run: |
