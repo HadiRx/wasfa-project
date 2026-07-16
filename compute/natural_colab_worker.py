@@ -12,6 +12,7 @@ import onnxruntime as ort
 
 from optimize_natural_cem import optimize as optimize_cem
 from optimize_natural_hybrid import optimize as optimize_hybrid
+from optimize_natural_coordinate import optimize as optimize_coordinate
 
 
 def append_jsonl(path: Path, record: dict) -> None:
@@ -66,9 +67,19 @@ def main(args) -> None:
       accept_epsilon=args.accept_epsilon,
       spacings=args.spacings,
       scales=args.scales,
+      coordinate_iterations=args.coordinate_iterations,
+      coordinate_min_delta=args.coordinate_min_delta,
+      coordinate_batch_size=args.coordinate_batch_size,
+      coordinate_spacings=args.coordinate_spacings,
+      coordinate_deltas=args.coordinate_deltas,
     )
     try:
-      optimizer = optimize_hybrid if args.method == "hybrid" else optimize_cem
+      if args.method == "coordinate":
+        optimizer = optimize_coordinate
+      elif args.method == "hybrid":
+        optimizer = optimize_hybrid
+      else:
+        optimizer = optimize_cem
       result = optimizer(config)
       result["status"] = "completed"
       append_jsonl(log_path, result)
@@ -98,7 +109,7 @@ if __name__ == "__main__":
   parser.add_argument("--end", type=int, default=5000)
   parser.add_argument("--time_budget_minutes", type=int, default=600)
   parser.add_argument("--provider", default="CUDAExecutionProvider")
-  parser.add_argument("--method", choices=["cem", "hybrid"], default="cem")
+  parser.add_argument("--method", choices=["cem", "hybrid", "coordinate"], default="cem")
   parser.add_argument("--population", type=int, default=512)
   parser.add_argument("--iterations", type=int, default=30)
   parser.add_argument("--elite_fraction", type=float, default=0.08)
@@ -112,5 +123,10 @@ if __name__ == "__main__":
   parser.add_argument("--accept_epsilon", type=float, default=1e-9)
   parser.add_argument("--spacings", default="80,40,20,10,5,2")
   parser.add_argument("--scales", default="0.030,0.025,0.020,0.015,0.010,0.0075")
+  parser.add_argument("--coordinate_iterations", type=int, default=12)
+  parser.add_argument("--coordinate_min_delta", type=float, default=0.0005)
+  parser.add_argument("--coordinate_batch_size", type=int, default=512)
+  parser.add_argument("--coordinate_spacings", default="20,10,5,2,1")
+  parser.add_argument("--coordinate_deltas", default="0.020,0.015,0.010,0.006,0.004")
   parser.add_argument("--refine", action="store_true")
   main(parser.parse_args())
