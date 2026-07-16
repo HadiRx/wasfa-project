@@ -10,7 +10,8 @@ from types import SimpleNamespace
 
 import onnxruntime as ort
 
-from optimize_natural_cem import optimize
+from optimize_natural_cem import optimize as optimize_cem
+from optimize_natural_hybrid import optimize as optimize_hybrid
 
 
 def append_jsonl(path: Path, record: dict) -> None:
@@ -60,9 +61,15 @@ def main(args) -> None:
       rho=args.rho,
       seed=args.seed + segment_id,
       resume=args.refine,
+      hybrid_iterations=args.hybrid_iterations,
+      hybrid_min_scale=args.hybrid_min_scale,
+      accept_epsilon=args.accept_epsilon,
+      spacings=args.spacings,
+      scales=args.scales,
     )
     try:
-      result = optimize(config)
+      optimizer = optimize_hybrid if args.method == "hybrid" else optimize_cem
+      result = optimizer(config)
       result["status"] = "completed"
       append_jsonl(log_path, result)
       completed += 1
@@ -70,12 +77,16 @@ def main(args) -> None:
       append_jsonl(log_path, {
         "segment": stem,
         "status": "failed",
+        "method": args.method,
         "error": f"{type(exc).__name__}: {exc}",
         "time": time.time(),
       })
       raise
 
-  print(f"COLAB_WORKER_DONE newly_completed={completed} out={out_dir}", flush=True)
+  print(
+    f"COLAB_WORKER_DONE method={args.method} newly_completed={completed} out={out_dir}",
+    flush=True,
+  )
 
 
 if __name__ == "__main__":
@@ -87,6 +98,7 @@ if __name__ == "__main__":
   parser.add_argument("--end", type=int, default=5000)
   parser.add_argument("--time_budget_minutes", type=int, default=600)
   parser.add_argument("--provider", default="CUDAExecutionProvider")
+  parser.add_argument("--method", choices=["cem", "hybrid"], default="cem")
   parser.add_argument("--population", type=int, default=512)
   parser.add_argument("--iterations", type=int, default=30)
   parser.add_argument("--elite_fraction", type=float, default=0.08)
@@ -95,5 +107,10 @@ if __name__ == "__main__":
   parser.add_argument("--momentum", type=float, default=0.25)
   parser.add_argument("--rho", type=float, default=0.92)
   parser.add_argument("--seed", type=int, default=2026)
+  parser.add_argument("--hybrid_iterations", type=int, default=12)
+  parser.add_argument("--hybrid_min_scale", type=float, default=0.001)
+  parser.add_argument("--accept_epsilon", type=float, default=1e-9)
+  parser.add_argument("--spacings", default="80,40,20,10,5,2")
+  parser.add_argument("--scales", default="0.030,0.025,0.020,0.015,0.010,0.0075")
   parser.add_argument("--refine", action="store_true")
   main(parser.parse_args())
