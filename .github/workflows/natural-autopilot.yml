@@ -30,10 +30,7 @@ jobs:
           ref: controls-challenge-compute
 
       - name: Checkout official challenge
-        uses: actions/checkout@v4
-        with:
-          repository: commaai/controls_challenge
-          path: controls_challenge
+        run: git clone --depth 1 https://github.com/commaai/controls_challenge.git controls_challenge
 
       - name: Set up Python
         uses: actions/setup-python@v5
