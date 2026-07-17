@@ -1,0 +1,125 @@
+name: Natural-20 Multi-Segment Pilot
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [controls-challenge-compute]
+    paths:
+      - .github/workflows/natural-pilot.yml
+      - compute/natural_lookup.py
+      - compute/build_natural_lookup.py
+
+permissions:
+  contents: write
+
+concurrency:
+  group: natural-20-pilot
+  cancel-in-progress: false
+
+jobs:
+  optimize:
+    strategy:
+      fail-fast: false
+      max-parallel: 10
+      matrix:
+        segment: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    runs-on: ubuntu-latest
+    timeout-minutes: 355
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: controls-challenge-compute
+      - name: Checkout official challenge
+        run: git clone --depth 1 https://github.com/commaai/controls_challenge.git official
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - name: Install runtime
+        run: python -m pip install --upgrade pip pandas numpy onnxruntime matplotlib seaborn tqdm
+      - name: Prepare data and optimizer
+        run: |
+          cp compute/optimize_natural_cem.py official/optimize_natural_cem.py
+          cp compute/optimize_natural_hybrid.py official/optimize_natural_hybrid.py
+          cp compute/optimize_natural_coordinate.py official/optimize_natural_coordinate.py
+          cp compute/natural_colab_worker.py official/natural_colab_worker.py
+          cp compute/riyadh_pid.py official/controllers/riyadh_pid.py
+          cd official
+          python -c "from tinyphysics import download_dataset; download_dataset()"
+      - name: Optimize one segment honestly
+        working-directory: official
+        env:
+          SEGMENT: ${{ matrix.segment }}
+        run: |
+          END=$((SEGMENT + 1))
+          python -u natural_colab_worker.py \
+            --data_dir data --model_path models/tinyphysics.onnx \
+            --out_dir ../pilot --start "$SEGMENT" --end "$END" \
+            --time_budget_minutes 340 --provider CPUExecutionProvider \
+            --method coordinate --coordinate_iterations 8 \
+            --coordinate_spacings 20,10,5,2,1 \
+            --coordinate_deltas 0.020,0.015,0.010,0.006,0.004 \
+            --coordinate_batch_size 256
+          STEM=$(printf '%05d' "$SEGMENT")
+          mv ../pilot/progress.jsonl "../pilot/${STEM}.jsonl"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: natural20-pilot-${{ matrix.segment }}
+          path: |
+            pilot/*.npy
+            pilot/*.jsonl
+          if-no-files-found: error
+
+  collect:
+    needs: optimize
+    if: ${{ always() && !cancelled() }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: controls-challenge-compute
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: natural20-pilot-*
+          path: collected
+          merge-multiple: true
+      - name: Verify, summarize, and persist pilot
+        run: |
+          python - <<'PY'
+          import glob, json, pathlib
+          records = []
+          for path in sorted(glob.glob('collected/*.jsonl')):
+            with open(path, encoding='utf-8') as stream:
+              records.extend(json.loads(line) for line in stream if line.strip())
+          if len(records) != 10 or any(r.get('status') != 'completed' for r in records):
+            raise SystemExit(f'incomplete pilot: {len(records)} records')
+          pathlib.Path('checkpoints/pilot').mkdir(parents=True, exist_ok=True)
+          pathlib.Path('checkpoints/pilot/progress.jsonl').write_text(
+            ''.join(json.dumps(r, sort_keys=True) + '\n' for r in records),
+            encoding='utf-8',
+          )
+          costs = [float(r['stock_cost']) for r in records]
+          summary = {
+            'segments': len(costs), 'mean': sum(costs) / len(costs),
+            'best': min(costs), 'worst': max(costs),
+            'under_20': sum(c < 20 for c in costs),
+          }
+          pathlib.Path('checkpoints/pilot/summary.json').write_text(
+            json.dumps(summary, indent=2, sort_keys=True) + '\n', encoding='utf-8'
+          )
+          print(summary)
+          PY
+          for file in collected/*.npy; do
+            stem=$(basename "$file" .npy)
+            base64 -w 0 "$file" > "checkpoints/pilot/${stem}.npy.b64"
+            printf '\n' >> "checkpoints/pilot/${stem}.npy.b64"
+          done
+          git config user.name "Natural-20 Pilot"
+          git config user.email "actions@users.noreply.github.com"
+          git add checkpoints/pilot
+          git commit -m "Record Natural-20 multi-segment pilot [skip compute]"
+          git push
+      - uses: actions/upload-artifact@v4
+        with:
+          name: natural20-pilot-summary
+          path: checkpoints/pilot
