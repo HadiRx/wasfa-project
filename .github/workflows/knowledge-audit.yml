@@ -1,0 +1,42 @@
+name: Natural-20 Knowledge Audit
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 3 * * 1'
+  push:
+    branches: [controls-challenge-compute]
+    paths:
+      - checkpoints/**
+      - knowledge/brain.py
+      - .github/workflows/knowledge-audit.yml
+
+permissions:
+  contents: write
+
+jobs:
+  compile-and-audit:
+    if: ${{ !contains(github.event.head_commit.message, '[skip brain]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: controls-challenge-compute
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile project memory
+        run: python knowledge/brain.py ingest --repo-root . --github-repo HadiRx/wasfa-project
+      - name: Audit knowledge integrity
+        run: python knowledge/brain.py audit --strict
+      - name: Persist generated notes
+        run: |
+          git config user.name "Natural-20 Brain"
+          git config user.email "actions@users.noreply.github.com"
+          git add knowledge/Home.md knowledge/Experiments/Auto-Results.md knowledge/Evidence/GitHub-Runs.md
+          if git diff --cached --quiet; then
+            echo "Knowledge is already current."
+          else
+            git commit -m "Refresh Natural-20 project memory [skip brain]"
+            git push
+          fi
