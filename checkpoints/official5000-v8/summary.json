@@ -1,0 +1,20 @@
+{
+  "aggregate_costs": {
+    "baseline": {
+      "jerk_cost": 25.49,
+      "lataccel_cost": 1.695,
+      "total_cost": 110.255
+    },
+    "test": {
+      "jerk_cost": 22.649,
+      "lataccel_cost": 1.033,
+      "total_cost": 74.294
+    }
+  },
+  "baseline_controller": "pid",
+  "controller_version": "V8",
+  "num_segments": 5000,
+  "report_sha256": "94a52ef40e9091b1e8cb42755a6471a025b30f079eb670b53663fdb9fbff8c3a",
+  "scope": "official-5000",
+  "test_controller": "riyadh_general"
+}
