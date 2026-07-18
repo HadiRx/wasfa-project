@@ -10,14 +10,20 @@ import numpy as np
 import pandas as pd
 
 
-def segment_examples(path):
+def segment_examples(path, sample_start=20, sample_stop=80):
   frame = pd.read_csv(path)
   target = frame["targetLateralAcceleration"].to_numpy(dtype=np.float64)
   roll = np.sin(frame["roll"].to_numpy(dtype=np.float64)) * 9.81
   speed = frame["vEgo"].to_numpy(dtype=np.float64)
   accel = frame["aEgo"].to_numpy(dtype=np.float64)
   action = -frame["steerCommand"].to_numpy(dtype=np.float64)
-  index = np.arange(20, 80)
+  stop = min(int(sample_stop), len(frame) - 20)
+  start = max(int(sample_start), 0)
+  if stop <= start:
+    raise ValueError(
+      f"empty warmup sample window [{start}, {stop}) for {path}"
+    )
+  index = np.arange(start, stop)
   net = target[index + 1] - roll[index + 1]
   features = np.column_stack([
     target[index], target[index + 1], target[index + 2], target[index + 5],
@@ -29,15 +35,18 @@ def segment_examples(path):
     roll[index] * speed[index],
   ])
   labels = action[index]
-  if not np.isfinite(features).all() or not np.isfinite(labels).all():
-    raise ValueError(f"non-finite warmup data in {path}")
-  return features, labels
+  valid = np.isfinite(features).all(axis=1) & np.isfinite(labels)
+  if not valid.any():
+    raise ValueError(f"no finite warmup samples in {path}")
+  return features[valid], labels[valid]
 
 
-def load_split(data_dir, start, count):
+def load_split(data_dir, start, count, sample_start=20, sample_stop=80):
   xs, ys = [], []
   for value in range(start, start + count):
-    features, labels = segment_examples(data_dir / f"{value:05d}.csv")
+    features, labels = segment_examples(
+      data_dir / f"{value:05d}.csv", sample_start, sample_stop
+    )
     xs.append(features)
     ys.append(labels)
   return np.concatenate(xs), np.concatenate(ys)
@@ -55,9 +64,19 @@ def metrics(labels, predictions):
 
 def main(args):
   data_dir = Path(args.data_dir)
-  train_x, train_y = load_split(data_dir, args.train_start, args.train_count)
+  train_x, train_y = load_split(
+    data_dir,
+    args.train_start,
+    args.train_count,
+    args.sample_start,
+    args.sample_stop,
+  )
   validation_x, validation_y = load_split(
-    data_dir, args.validation_start, args.validation_count
+    data_dir,
+    args.validation_start,
+    args.validation_count,
+    args.sample_start,
+    args.sample_stop,
   )
   mean = train_x.mean(axis=0)
   scale = train_x.std(axis=0) + 1e-6
@@ -84,6 +103,7 @@ def main(args):
     "validation_range": [
       args.validation_start, args.validation_start + args.validation_count
     ],
+    "sample_window": [args.sample_start, args.sample_stop],
     "train_metrics": metrics(train_y, train_prediction),
     "validation_metrics": metrics(validation_y, validation_prediction),
     "model": str(output),
@@ -102,6 +122,8 @@ if __name__ == "__main__":
   parser.add_argument("--validation-start", type=int, default=10000)
   parser.add_argument("--validation-count", type=int, default=500)
   parser.add_argument("--ridge", type=float, default=0.01)
+  parser.add_argument("--sample-start", type=int, default=20)
+  parser.add_argument("--sample-stop", type=int, default=80)
   parser.add_argument(
     "--output", default="checkpoints/general/models/warmup-inverse-linear-v1.npz"
   )

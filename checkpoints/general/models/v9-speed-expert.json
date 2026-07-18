@@ -1,0 +1,37 @@
+{
+  "expert_bandwidth": 6.0,
+  "expert_centers": [
+    5.0,
+    12.5,
+    20.0,
+    27.5,
+    35.0,
+    42.5
+  ],
+  "model": "checkpoints/general/models/v9-speed-expert.npz",
+  "sample_window": [
+    20,
+    480
+  ],
+  "scope": "warmup-speed-expert-inverse-supervised",
+  "train_metrics": {
+    "mae": 0.07975076942146146,
+    "r2": 0.8658860375515611,
+    "rmse": 0.09506592943281492,
+    "samples": 400000
+  },
+  "train_range": [
+    0,
+    5000
+  ],
+  "validation_metrics": {
+    "mae": 0.07600563134848659,
+    "r2": 0.8793403755442012,
+    "rmse": 0.09177938909101094,
+    "samples": 40000
+  },
+  "validation_range": [
+    10000,
+    10500
+  ]
+}

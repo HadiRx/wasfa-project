@@ -1,16 +1,16 @@
 ---
 type: dashboard
 project: Riyadh Natural-20
-updated_at: 2026-07-18T12:36:03+00:00
+updated_at: 2026-07-18T15:46:20+00:00
 official_submission_score: null
 ---
 
 # Riyadh Natural-20 / الرياض — الهدف الطبيعي 20
 
 > [!info] Current truth
-> The best verified checkpoint for segment `00000` is **19.691418**.
+> The best verified checkpoint for segment `00000` is **19.585941**.
 > The mean across the **11 available per-segment checkpoints** is
-> **21.026704**, with **5** below 20. This is not a leaderboard result.
+> **21.017115**, with **5** below 20. This is not a leaderboard result.
 
 ## Navigation
 

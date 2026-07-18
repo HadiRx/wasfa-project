@@ -1,0 +1,28 @@
+{
+  "model": "checkpoints/general/models/v9-autoregressive.npz",
+  "sample_window": [
+    20,
+    100
+  ],
+  "scope": "warmup-autoregressive-inverse-supervised",
+  "train_metrics": {
+    "mae": 0.006782539169183751,
+    "r2": 0.9974117818503833,
+    "rmse": 0.013206518395832596,
+    "samples": 400000
+  },
+  "train_range": [
+    0,
+    5000
+  ],
+  "validation_metrics": {
+    "mae": 0.006637945280828108,
+    "r2": 0.9976607602931791,
+    "rmse": 0.012779137455113321,
+    "samples": 40000
+  },
+  "validation_range": [
+    10000,
+    10500
+  ]
+}

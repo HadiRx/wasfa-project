@@ -25,3 +25,8 @@ The first implementation and evidence are in
 
 The rebuilt inverse-feedforward candidate and its recovery limitations are in
 [[Experiments/General-Controller-V8-Recovery]].
+
+The V9 robustness campaign and its rejected candidates are in
+[[Experiments/General-Controller-V9-Robustness]]. V8 remains active until a
+later candidate passes both development and untouched-set promotion gates.
+The formal promotion decision is [[Decisions/Reject-V9-Candidates]].

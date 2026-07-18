@@ -1,0 +1,28 @@
+{
+  "model": "checkpoints/general/models/v9-window20-480.npz",
+  "sample_window": [
+    20,
+    480
+  ],
+  "scope": "warmup-inverse-supervised",
+  "train_metrics": {
+    "mae": 0.08018462849595416,
+    "r2": 0.8638265400727195,
+    "rmse": 0.09579308009158996,
+    "samples": 400000
+  },
+  "train_range": [
+    0,
+    5000
+  ],
+  "validation_metrics": {
+    "mae": 0.07634804782260378,
+    "r2": 0.8766009469128556,
+    "rmse": 0.09281541086642432,
+    "samples": 40000
+  },
+  "validation_range": [
+    10000,
+    10500
+  ]
+}

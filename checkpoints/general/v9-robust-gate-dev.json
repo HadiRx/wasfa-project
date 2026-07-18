@@ -1,0 +1,39 @@
+{
+  "baseline": "checkpoints/general/inverse-v8-local-test-100.json",
+  "baseline_metrics": {
+    "mean": 55.310089753209795,
+    "median": 48.867802298305186,
+    "worst": 267.0008807509632
+  },
+  "candidate": "checkpoints/general/v9-robust-candidate-dev-16500.json",
+  "candidate_metrics": {
+    "mean": 55.08465726439596,
+    "median": 49.465650908208815,
+    "worst": 228.75975765746588
+  },
+  "change_percent": {
+    "mean": -0.40757932200020447,
+    "median": 1.2233998293071657,
+    "worst": -14.322470767115378
+  },
+  "checks": {
+    "mean": true,
+    "median": false,
+    "regressed_segments": true,
+    "worst": true
+  },
+  "passed": false,
+  "regressed_segments": 60,
+  "segments": 100,
+  "tolerances": {
+    "max_regressed_segments": -1,
+    "mean_percent": 0.0,
+    "median_percent": 0.0,
+    "segment_epsilon": 1e-09,
+    "worst_percent": 0.0
+  },
+  "worst_regression": {
+    "delta": 12.640596667814293,
+    "segment": "16549"
+  }
+}

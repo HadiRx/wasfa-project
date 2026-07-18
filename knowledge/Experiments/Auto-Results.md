@@ -1,7 +1,7 @@
 ---
 type: generated-evidence
 scope: per-segment-checkpoints
-generated_at: 2026-07-18T12:35:56+00:00
+generated_at: 2026-07-18T15:46:14+00:00
 verified_segments: 11
 ---
 
@@ -14,7 +14,7 @@ verified_segments: 11
 
 | Segment | Latest stock cost | Previous | Method | Parity delta | Evidence |
 |---|---:|---:|---|---:|---|
-| 00000 | 19.691418 | 19.989066 | coordinate_pattern | 0 | `checkpoints/autopilot-progress.jsonl:1` |
+| 00000 | 19.585941 | 19.691418 | coordinate_pattern | 0 | `checkpoints/autopilot-progress.jsonl:1` |
 | 00001 | 13.904693 | 16.058436 | coordinate_pattern | 0 | `checkpoints/pilot/refined-progress.jsonl:1` |
 | 00002 | 33.582952 | 42.433693 | coordinate_pattern | 0 | `checkpoints/pilot/refined-progress.jsonl:2` |
 | 00003 | 20.759115 | 25.603151 | coordinate_pattern | 0 | `checkpoints/pilot/refined-progress.jsonl:3` |
@@ -29,7 +29,7 @@ verified_segments: 11
 ## Snapshot
 
 - Verified checkpoint segments: **11**
-- Mean over available checkpoints: **21.026704**
+- Mean over available checkpoints: **21.017115**
 - Checkpoints below 20: **5/11**
 - Official 5000-segment score: **not available**
 

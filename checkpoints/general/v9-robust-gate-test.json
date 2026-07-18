@@ -1,0 +1,39 @@
+{
+  "baseline": "checkpoints/general/v8-baseline-test-17500.json",
+  "baseline_metrics": {
+    "mean": 81.30962722624152,
+    "median": 54.698405873386335,
+    "worst": 1668.2279526771429
+  },
+  "candidate": "checkpoints/general/v9-robust-candidate-test-17500.json",
+  "candidate_metrics": {
+    "mean": 87.11791282568713,
+    "median": 53.23958782340523,
+    "worst": 1646.177007192488
+  },
+  "change_percent": {
+    "mean": 7.143416834619394,
+    "median": -2.667021143829891,
+    "worst": -1.3218184870519603
+  },
+  "checks": {
+    "mean": false,
+    "median": true,
+    "regressed_segments": true,
+    "worst": true
+  },
+  "passed": false,
+  "regressed_segments": 50,
+  "segments": 100,
+  "tolerances": {
+    "max_regressed_segments": -1,
+    "mean_percent": 0.0,
+    "median_percent": 0.0,
+    "segment_epsilon": 1e-09,
+    "worst_percent": 0.0
+  },
+  "worst_regression": {
+    "delta": 1148.3042980505124,
+    "segment": "17511"
+  }
+}
