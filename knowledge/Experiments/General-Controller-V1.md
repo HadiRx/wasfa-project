@@ -41,6 +41,11 @@ The mean and worst case improved on the untouched test set, while the median
 regressed slightly. V1 is therefore accepted only as a baseline for the next
 general-controller iteration, not as submission-ready.
 
+GitHub Actions independently reproduced these values in run `29636204659`
+(`Natural-20 General Controller Evaluation`, conclusion `success`, commit
+`454a4cc`). Later V2–V4 attempts were rejected and are documented in
+[[Experiments/General-Controller-V2-V4]].
+
 ## Rejected experiments retained
 
 ### Residual MLP V0

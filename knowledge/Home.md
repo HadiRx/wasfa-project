@@ -1,7 +1,7 @@
 ---
 type: dashboard
 project: Riyadh Natural-20
-updated_at: 2026-07-18T07:30:08+00:00
+updated_at: 2026-07-18T08:00:37+00:00
 official_submission_score: null
 ---
 
@@ -18,6 +18,7 @@ official_submission_score: null
 - [[Experiments/Segment-00000|Segment 00000 history]]
 - [[Experiments/Pilot-00001-00010|Ten-segment pilot]]
 - [[Experiments/General-Controller-V1|General controller V1]]
+- [[Experiments/General-Controller-V2-V4|General controller rejected iterations]]
 - [[Decisions/Scale-Gate|Scale decision]]
 - [[Decisions/General-Controller-Track|General controller decision]]
 - [[Evidence/Verified-Scores|Verified scores and evidence rules]]

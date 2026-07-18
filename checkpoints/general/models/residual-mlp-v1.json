@@ -1,0 +1,77 @@
+{
+  "best_validation_residual_mse": 0.00332487840205431,
+  "feature_count": 16,
+  "policy": "route_agnostic_residual_mlp",
+  "residual_limit": 0.6035866141319275,
+  "seed": 2027,
+  "teacher_train_costs": {
+    "00001": {
+      "jerk_cost": 7.2755127547533665,
+      "lataccel_cost": 0.13258360004972525,
+      "total_cost": 13.90469275723963
+    },
+    "00004": {
+      "jerk_cost": 3.7048117944711842,
+      "lataccel_cost": 0.11379624000974353,
+      "total_cost": 9.39462379495836
+    },
+    "00005": {
+      "jerk_cost": 9.10277287057853,
+      "lataccel_cost": 0.17979814768940916,
+      "total_cost": 18.09268025504899
+    },
+    "00006": {
+      "jerk_cost": 40.56118716883766,
+      "lataccel_cost": 1.2143349097682836,
+      "total_cost": 101.27793265725185
+    },
+    "00007": {
+      "jerk_cost": 1.5111417209510778,
+      "lataccel_cost": 0.02285420248297114,
+      "total_cost": 2.6538518450996347
+    },
+    "00008": {
+      "jerk_cost": 16.495632605247266,
+      "lataccel_cost": 0.5160448211119286,
+      "total_cost": 42.2978736608437
+    },
+    "00009": {
+      "jerk_cost": 19.581726461023827,
+      "lataccel_cost": 0.35595174794153367,
+      "total_cost": 37.37931385810051
+    },
+    "00010": {
+      "jerk_cost": 18.770727113810704,
+      "lataccel_cost": 0.3762357782419891,
+      "total_cost": 37.58251602591016
+    }
+  },
+  "teacher_validation_costs": {
+    "00002": {
+      "jerk_cost": 19.10121452663364,
+      "lataccel_cost": 0.4666495693101112,
+      "total_cost": 42.4336929921392
+    },
+    "00003": {
+      "jerk_cost": 10.724077062470574,
+      "lataccel_cost": 0.29758148549104013,
+      "total_cost": 25.60315133702258
+    }
+  },
+  "train_samples": 3200,
+  "train_segments": [
+    "00001",
+    "00004",
+    "00005",
+    "00006",
+    "00007",
+    "00008",
+    "00009",
+    "00010"
+  ],
+  "validation_samples": 800,
+  "validation_segments": [
+    "00002",
+    "00003"
+  ]
+}

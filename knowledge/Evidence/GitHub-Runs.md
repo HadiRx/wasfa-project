@@ -1,12 +1,15 @@
 ---
 type: generated-evidence
-generated_at: 2026-07-18T07:30:08+00:00
+generated_at: 2026-07-18T08:00:37+00:00
 ---
 
 # GitHub Runs
 
 | Run | Status | Conclusion | Created (UTC) | Commit |
 |---|---|---|---|---|
+| [Natural-20 CPU Autopilot #8](https://github.com/HadiRx/wasfa-project/actions/runs/29636205003) | in_progress | — | 2026-07-18T07:42:36Z | `454a4cc8` |
+| [Natural-20 General Controller Evaluation #1](https://github.com/HadiRx/wasfa-project/actions/runs/29636204659) | completed | success | 2026-07-18T07:42:35Z | `454a4cc8` |
+| [Natural-20 Knowledge Audit #2](https://github.com/HadiRx/wasfa-project/actions/runs/29636204646) | completed | skipped | 2026-07-18T07:42:35Z | `454a4cc8` |
 | [Natural-20 Targeted Hard-Segment Refinement #1](https://github.com/HadiRx/wasfa-project/actions/runs/29634493619) | in_progress | — | 2026-07-18T06:43:53Z | `9a1c6b86` |
 | [Natural-20 Hard-Segment Diagnosis #2](https://github.com/HadiRx/wasfa-project/actions/runs/29634402398) | completed | success | 2026-07-18T06:40:49Z | `73b80563` |
 | [Natural-20 Hard-Segment Diagnosis #1](https://github.com/HadiRx/wasfa-project/actions/runs/29634356923) | completed | failure | 2026-07-18T06:39:14Z | `da0a7e8f` |

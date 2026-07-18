@@ -133,6 +133,7 @@ class Controller(BaseController):
     self.integral_decay = float(os.getenv("RIYADH_GENERAL_IDECAY", "1.0"))
     self.integral_limit = float(os.getenv("RIYADH_GENERAL_ILIMIT", "1000000.0"))
     self.action_delta_limit = float(os.getenv("RIYADH_GENERAL_ACTION_DELTA", "4.0"))
+    self.residual_scale = float(os.getenv("RIYADH_GENERAL_RESIDUAL_SCALE", "1.0"))
 
   def update(self, target_lataccel, current_lataccel, state, future_plan):
     error = float(target_lataccel - current_lataccel)
@@ -159,7 +160,7 @@ class Controller(BaseController):
       + self.kpreview * float(features[11])
       + self.kroll * float(state.roll_lataccel)
     )
-    requested = base + self.policy.predict(features)
+    requested = base + self.residual_scale * self.policy.predict(features)
 
     action = float(np.clip(
       requested,
