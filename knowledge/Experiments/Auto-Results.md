@@ -1,7 +1,7 @@
 ---
 type: generated-evidence
 scope: per-segment-checkpoints
-generated_at: 2026-07-17T02:26:15+00:00
+generated_at: 2026-07-18T06:48:20+00:00
 verified_segments: 11
 ---
 
@@ -15,22 +15,22 @@ verified_segments: 11
 | Segment | Latest stock cost | Previous | Method | Parity delta | Evidence |
 |---|---:|---:|---|---:|---|
 | 00000 | 19.691418 | 19.989066 | coordinate_pattern | 0 | `checkpoints/autopilot-progress.jsonl:1` |
-| 00001 | 16.058436 | 32.395900 | coordinate_pattern | 0 | `checkpoints/pilot/progress.jsonl:1` |
-| 00002 | 57.042734 | 74.034921 | coordinate_pattern | 0 | `checkpoints/pilot/progress.jsonl:2` |
-| 00003 | 57.536242 | 79.267295 | coordinate_pattern | 0 | `checkpoints/pilot/progress.jsonl:3` |
-| 00004 | 21.218699 | 39.670581 | coordinate_pattern | 0 | `checkpoints/pilot/progress.jsonl:4` |
-| 00005 | 30.679415 | 50.522862 | coordinate_pattern | 0 | `checkpoints/pilot/progress.jsonl:5` |
-| 00006 | 111.587081 | 130.896802 | coordinate_pattern | 0 | `checkpoints/pilot/progress.jsonl:6` |
-| 00007 | 4.116717 | 7.605928 | coordinate_pattern | 0 | `checkpoints/pilot/progress.jsonl:7` |
-| 00008 | 66.421436 | 89.637394 | coordinate_pattern | 0 | `checkpoints/pilot/progress.jsonl:8` |
-| 00009 | 70.083236 | 92.871986 | coordinate_pattern | 0 | `checkpoints/pilot/progress.jsonl:9` |
-| 00010 | 48.607902 | 61.669843 | coordinate_pattern | 0 | `checkpoints/pilot/progress.jsonl:10` |
+| 00001 | 13.904693 | 16.058436 | coordinate_pattern | 0 | `checkpoints/pilot/refined-progress.jsonl:1` |
+| 00002 | 42.433693 | 57.042734 | coordinate_pattern | 0 | `checkpoints/pilot/refined-progress.jsonl:2` |
+| 00003 | 25.603151 | 57.536242 | coordinate_pattern | 0 | `checkpoints/pilot/refined-progress.jsonl:3` |
+| 00004 | 9.394624 | 21.218699 | coordinate_pattern | 0 | `checkpoints/pilot/refined-progress.jsonl:4` |
+| 00005 | 18.092680 | 30.679415 | coordinate_pattern | 0 | `checkpoints/pilot/refined-progress.jsonl:5` |
+| 00006 | 101.277933 | 111.587081 | coordinate_pattern | 0 | `checkpoints/pilot/refined-progress.jsonl:6` |
+| 00007 | 2.653852 | 4.116717 | coordinate_pattern | 0 | `checkpoints/pilot/refined-progress.jsonl:7` |
+| 00008 | 42.297874 | 66.421436 | coordinate_pattern | 0 | `checkpoints/pilot/refined-progress.jsonl:8` |
+| 00009 | 37.379314 | 70.083236 | coordinate_pattern | 0 | `checkpoints/pilot/refined-progress.jsonl:9` |
+| 00010 | 37.582516 | 48.607902 | coordinate_pattern | 0 | `checkpoints/pilot/refined-progress.jsonl:10` |
 
 ## Snapshot
 
 - Verified checkpoint segments: **11**
-- Mean over available checkpoints: **45.731210**
-- Checkpoints below 20: **3/11**
+- Mean over available checkpoints: **31.846522**
+- Checkpoints below 20: **5/11**
 - Official 5000-segment score: **not available**
 
 See [[Evidence/Verified-Scores]] and [[Decisions/Scale-Gate]].

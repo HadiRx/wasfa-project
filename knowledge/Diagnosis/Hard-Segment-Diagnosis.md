@@ -10,3 +10,8 @@ Source: stock TinyPhysics rollouts using saved steering checkpoints in `checkpoi
 | 00010 | 37.582516 | 0.061338 | 0.210288 | 0.499454 | jerk_dominated | 456 | 475 |
 | 00009 | 37.379314 | 0.059662 | 0.444363 | 0.523865 | jerk_dominated | 102 | 121 |
 | 00003 | 25.603151 | 0.054551 | 0.279228 | 0.418858 | jerk_dominated | 395 | 414 |
+
+Detailed notes: [[Diagnosis/route-00002-analysis]],
+[[Diagnosis/route-00003-analysis]], [[Diagnosis/route-00006-analysis]],
+[[Diagnosis/route-00008-analysis]], [[Diagnosis/route-00009-analysis]],
+[[Diagnosis/route-00010-analysis]].

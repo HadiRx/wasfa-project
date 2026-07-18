@@ -1,16 +1,20 @@
 ---
 type: generated-evidence
-generated_at: 2026-07-17T02:26:16+00:00
+generated_at: 2026-07-18T06:48:24+00:00
 ---
 
 # GitHub Runs
 
 | Run | Status | Conclusion | Created (UTC) | Commit |
 |---|---|---|---|---|
-| [Natural-20 Knowledge Audit #1](https://github.com/HadiRx/wasfa-project/actions/runs/29549912999) | in_progress | — | 2026-07-17T02:26:10Z | `0ed59387` |
-| [Natural-20 Pilot Refinement #1](https://github.com/HadiRx/wasfa-project/actions/runs/29548669568) | in_progress | — | 2026-07-17T01:55:43Z | `aae9ffbe` |
+| [Natural-20 Targeted Hard-Segment Refinement #1](https://github.com/HadiRx/wasfa-project/actions/runs/29634493619) | in_progress | — | 2026-07-18T06:43:53Z | `9a1c6b86` |
+| [Natural-20 Hard-Segment Diagnosis #2](https://github.com/HadiRx/wasfa-project/actions/runs/29634402398) | completed | success | 2026-07-18T06:40:49Z | `73b80563` |
+| [Natural-20 Hard-Segment Diagnosis #1](https://github.com/HadiRx/wasfa-project/actions/runs/29634356923) | completed | failure | 2026-07-18T06:39:14Z | `da0a7e8f` |
+| [Natural-20 CPU Autopilot #7](https://github.com/HadiRx/wasfa-project/actions/runs/29634356413) | completed | skipped | 2026-07-18T06:39:13Z | `72425955` |
+| [Natural-20 Knowledge Audit #1](https://github.com/HadiRx/wasfa-project/actions/runs/29549912999) | completed | success | 2026-07-17T02:26:10Z | `0ed59387` |
+| [Natural-20 Pilot Refinement #1](https://github.com/HadiRx/wasfa-project/actions/runs/29548669568) | completed | success | 2026-07-17T01:55:43Z | `aae9ffbe` |
 | [Natural-20 Multi-Segment Pilot #1](https://github.com/HadiRx/wasfa-project/actions/runs/29545943690) | completed | success | 2026-07-17T00:52:15Z | `f55a5d5e` |
-| [Natural-20 CPU Autopilot #6](https://github.com/HadiRx/wasfa-project/actions/runs/29545942049) | in_progress | — | 2026-07-17T00:52:13Z | `d0c2f52a` |
+| [Natural-20 CPU Autopilot #6](https://github.com/HadiRx/wasfa-project/actions/runs/29545942049) | completed | failure | 2026-07-17T00:52:13Z | `d0c2f52a` |
 | [Natural-20 CPU Autopilot #5](https://github.com/HadiRx/wasfa-project/actions/runs/29545941659) | completed | success | 2026-07-17T00:52:13Z | `34755119` |
 | [Natural-20 CPU Autopilot #4](https://github.com/HadiRx/wasfa-project/actions/runs/29542025806) | completed | success | 2026-07-16T23:22:45Z | `4d44e449` |
 | [Natural-20 CPU Autopilot #3](https://github.com/HadiRx/wasfa-project/actions/runs/29541880753) | completed | failure | 2026-07-16T23:19:12Z | `c4206b07` |

@@ -21,4 +21,6 @@ algorithm rather than multiply a weak configuration across 5000 routes.
 4. Runtime estimate fits the selected compute budget.
 5. The lookup controller reproduces offline actions through `update()` only.
 
-Related: [[Experiments/Pilot-00001-00010]], [[Submission/Controller-Design]].
+Related: [[Experiments/Pilot-00001-00010]], [[Diagnosis/Hard-Segment-Diagnosis]],
+[[Decisions/Targeted-Round-00003]], [[Diagnosis/Route-00006-Analysis]],
+[[Submission/Controller-Design]].
