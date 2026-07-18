@@ -1,0 +1,78 @@
+{
+  "controller_variant": "analytic_feedback",
+  "mean_improvement_vs_pid_percent": 0.0,
+  "mean_total_cost": 73.77045179941973,
+  "median_total_cost": 57.515401495450206,
+  "pid_baseline": {
+    "mean_total_cost": 73.77045179941973,
+    "median_total_cost": 57.515401495450206,
+    "records": [
+      {
+        "jerk_cost": 26.288118337369244,
+        "lataccel_cost": 2.178275768742278,
+        "segment": "00100",
+        "total_cost": 135.20190677448315
+      },
+      {
+        "jerk_cost": 20.332160397582694,
+        "lataccel_cost": 0.7436648219573503,
+        "segment": "00101",
+        "total_cost": 57.515401495450206
+      },
+      {
+        "jerk_cost": 26.065398559162507,
+        "lataccel_cost": 0.9624722495438341,
+        "segment": "00102",
+        "total_cost": 74.18901103635422
+      },
+      {
+        "jerk_cost": 9.926596566310963,
+        "lataccel_cost": 0.7284710947447067,
+        "segment": "00103",
+        "total_cost": 46.3501513035463
+      },
+      {
+        "jerk_cost": 9.057270980407258,
+        "lataccel_cost": 0.9307703481371509,
+        "segment": "00104",
+        "total_cost": 55.595788387264804
+      }
+    ],
+    "worst_total_cost": 135.20190677448315
+  },
+  "records": [
+    {
+      "jerk_cost": 26.288118337369244,
+      "lataccel_cost": 2.178275768742278,
+      "segment": "00100",
+      "total_cost": 135.20190677448315
+    },
+    {
+      "jerk_cost": 20.332160397582694,
+      "lataccel_cost": 0.7436648219573503,
+      "segment": "00101",
+      "total_cost": 57.515401495450206
+    },
+    {
+      "jerk_cost": 26.065398559162507,
+      "lataccel_cost": 0.9624722495438341,
+      "segment": "00102",
+      "total_cost": 74.18901103635422
+    },
+    {
+      "jerk_cost": 9.926596566310963,
+      "lataccel_cost": 0.7284710947447067,
+      "segment": "00103",
+      "total_cost": 46.3501513035463
+    },
+    {
+      "jerk_cost": 9.057270980407258,
+      "lataccel_cost": 0.9307703481371509,
+      "segment": "00104",
+      "total_cost": 55.595788387264804
+    }
+  ],
+  "scope": "held_out_segments",
+  "segments": 5,
+  "worst_total_cost": 135.20190677448315
+}

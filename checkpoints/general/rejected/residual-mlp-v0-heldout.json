@@ -1,0 +1,21 @@
+{
+  "mean_total_cost": 217.93941033332993,
+  "median_total_cost": 217.93941033332993,
+  "records": [
+    {
+      "jerk_cost": 32.84757503100631,
+      "lataccel_cost": 2.1437943204937575,
+      "segment": "00004",
+      "total_cost": 140.03729105569417
+    },
+    {
+      "jerk_cost": 55.12673736065435,
+      "lataccel_cost": 4.814295845006227,
+      "segment": "00008",
+      "total_cost": 295.8415296109657
+    }
+  ],
+  "scope": "held_out_segments",
+  "segments": 2,
+  "worst_total_cost": 295.8415296109657
+}

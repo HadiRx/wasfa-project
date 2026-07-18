@@ -1,0 +1,190 @@
+{
+  "controller_variant": "analytic_feedback",
+  "mean_total_cost": 112.65747186998227,
+  "median_total_cost": 74.6063813484265,
+  "records": [
+    {
+      "jerk_cost": 18.275103762210986,
+      "lataccel_cost": 1.7075669104270002,
+      "segment": "00200",
+      "total_cost": 103.653449283561
+    },
+    {
+      "jerk_cost": 30.92691629851384,
+      "lataccel_cost": 1.4418176195015104,
+      "segment": "00201",
+      "total_cost": 103.01779727358937
+    },
+    {
+      "jerk_cost": 23.13411889760287,
+      "lataccel_cost": 1.0081536015507497,
+      "segment": "00202",
+      "total_cost": 73.54179897514035
+    },
+    {
+      "jerk_cost": 120.34051334719993,
+      "lataccel_cost": 13.701335132173803,
+      "segment": "00203",
+      "total_cost": 805.4072699558901
+    },
+    {
+      "jerk_cost": 31.42025258142335,
+      "lataccel_cost": 1.4633097872676637,
+      "segment": "00204",
+      "total_cost": 104.58574194480654
+    },
+    {
+      "jerk_cost": 27.969293437381353,
+      "lataccel_cost": 0.8962013624893926,
+      "segment": "00205",
+      "total_cost": 72.77936156185098
+    },
+    {
+      "jerk_cost": 27.20773548609383,
+      "lataccel_cost": 1.2621027295970677,
+      "segment": "00206",
+      "total_cost": 90.31287196594721
+    },
+    {
+      "jerk_cost": 10.465434739391773,
+      "lataccel_cost": 0.5377520528171552,
+      "segment": "00207",
+      "total_cost": 37.35303738024953
+    },
+    {
+      "jerk_cost": 23.004797736063487,
+      "lataccel_cost": 1.423590099148496,
+      "segment": "00208",
+      "total_cost": 94.18430269348829
+    },
+    {
+      "jerk_cost": 19.012605582615937,
+      "lataccel_cost": 1.0882343119318598,
+      "segment": "00209",
+      "total_cost": 73.42432117920893
+    },
+    {
+      "jerk_cost": 34.66765063785712,
+      "lataccel_cost": 1.5708751607279026,
+      "segment": "00210",
+      "total_cost": 113.21140867425225
+    },
+    {
+      "jerk_cost": 7.127032902615546,
+      "lataccel_cost": 0.6927850645420266,
+      "segment": "00211",
+      "total_cost": 41.766286129716875
+    },
+    {
+      "jerk_cost": 26.09413659506013,
+      "lataccel_cost": 0.9101576703404182,
+      "segment": "00212",
+      "total_cost": 71.60202011208104
+    },
+    {
+      "jerk_cost": 47.76501049820809,
+      "lataccel_cost": 1.4509509439990687,
+      "segment": "00213",
+      "total_cost": 120.31255769816153
+    },
+    {
+      "jerk_cost": 4.037694043618892,
+      "lataccel_cost": 0.6884531876782674,
+      "segment": "00214",
+      "total_cost": 38.46035342753226
+    },
+    {
+      "jerk_cost": 19.941802076639664,
+      "lataccel_cost": 0.8140175686612988,
+      "segment": "00215",
+      "total_cost": 60.642680509704604
+    },
+    {
+      "jerk_cost": 15.621517346693944,
+      "lataccel_cost": 0.5517332699104386,
+      "segment": "00216",
+      "total_cost": 43.208180842215874
+    },
+    {
+      "jerk_cost": 21.54873725058288,
+      "lataccel_cost": 0.8963461879482503,
+      "segment": "00217",
+      "total_cost": 66.3660466479954
+    },
+    {
+      "jerk_cost": 12.21366525649841,
+      "lataccel_cost": 0.8514379067454545,
+      "segment": "00218",
+      "total_cost": 54.78556059377113
+    },
+    {
+      "jerk_cost": 1.6668060820633122,
+      "lataccel_cost": 0.37342916494474016,
+      "segment": "00219",
+      "total_cost": 20.338264329300323
+    },
+    {
+      "jerk_cost": 33.57321043742184,
+      "lataccel_cost": 1.6238482194403991,
+      "segment": "00220",
+      "total_cost": 114.76562140944179
+    },
+    {
+      "jerk_cost": 6.367869787652798,
+      "lataccel_cost": 0.5069000757944675,
+      "segment": "00221",
+      "total_cost": 31.712873577376172
+    },
+    {
+      "jerk_cost": 32.74518380393934,
+      "lataccel_cost": 1.7151729853114825,
+      "segment": "00222",
+      "total_cost": 118.50383306951346
+    },
+    {
+      "jerk_cost": 16.442946206101634,
+      "lataccel_cost": 0.5690768832028161,
+      "segment": "00223",
+      "total_cost": 44.89679036624244
+    },
+    {
+      "jerk_cost": 55.55695773222376,
+      "lataccel_cost": 3.0428011604306704,
+      "segment": "00224",
+      "total_cost": 207.69701575375728
+    },
+    {
+      "jerk_cost": 24.839242360863054,
+      "lataccel_cost": 1.2312073970937818,
+      "segment": "00225",
+      "total_cost": 86.39961221555214
+    },
+    {
+      "jerk_cost": 51.186680793997716,
+      "lataccel_cost": 5.086153716071101,
+      "segment": "00226",
+      "total_cost": 305.49436659755276
+    },
+    {
+      "jerk_cost": 23.098196352730813,
+      "lataccel_cost": 1.0514553473796366,
+      "segment": "00227",
+      "total_cost": 75.67096372171264
+    },
+    {
+      "jerk_cost": 36.8996380925741,
+      "lataccel_cost": 2.7164419514193727,
+      "segment": "00228",
+      "total_cost": 172.72173566354272
+    },
+    {
+      "jerk_cost": 9.780511550497941,
+      "lataccel_cost": 0.46255041991629664,
+      "segment": "00229",
+      "total_cost": 32.908032546312775
+    }
+  ],
+  "scope": "held_out_segments",
+  "segments": 30,
+  "worst_total_cost": 805.4072699558901
+}

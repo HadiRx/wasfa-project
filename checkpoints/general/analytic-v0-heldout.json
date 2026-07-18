@@ -1,0 +1,42 @@
+{
+  "controller_variant": "analytic_feedback",
+  "mean_improvement_vs_pid_percent": 5.031693423828331,
+  "mean_total_cost": 68.56484690442076,
+  "median_total_cost": 68.56484690442076,
+  "pid_baseline": {
+    "mean_total_cost": 72.19760926180845,
+    "median_total_cost": 72.19760926180845,
+    "records": [
+      {
+        "jerk_cost": 10.168475035116124,
+        "lataccel_cost": 0.6493528225474604,
+        "segment": "00004",
+        "total_cost": 42.636116162489145
+      },
+      {
+        "jerk_cost": 22.207317239903894,
+        "lataccel_cost": 1.5910357024244772,
+        "segment": "00008",
+        "total_cost": 101.75910236112776
+      }
+    ],
+    "worst_total_cost": 101.75910236112776
+  },
+  "records": [
+    {
+      "jerk_cost": 8.535196661600063,
+      "lataccel_cost": 0.6011122172734468,
+      "segment": "00004",
+      "total_cost": 38.5908075252724
+    },
+    {
+      "jerk_cost": 19.920248549716444,
+      "lataccel_cost": 1.5723727546770534,
+      "segment": "00008",
+      "total_cost": 98.53888628356911
+    }
+  ],
+  "scope": "held_out_segments",
+  "segments": 2,
+  "worst_total_cost": 98.53888628356911
+}

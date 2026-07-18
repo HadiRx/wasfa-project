@@ -1,0 +1,41 @@
+name: Natural-20 General Controller Evaluation
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [controls-challenge-compute]
+    paths:
+      - compute/riyadh_general.py
+      - compute/evaluate_general_policy.py
+      - .github/workflows/natural-general-controller.yml
+
+jobs:
+  unseen-100:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - name: Checkout official challenge
+        run: git clone --depth 1 https://github.com/commaai/controls_challenge.git official
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - name: Install official runtime
+        run: python -m pip install --upgrade pip pandas numpy onnxruntime matplotlib seaborn tqdm
+      - name: Download official dataset
+        working-directory: official
+        run: python -c "from tinyphysics import download_dataset; download_dataset()"
+      - name: Evaluate route-agnostic controller on unseen segments
+        run: |
+          python -u compute/evaluate_general_policy.py \
+            --official-dir official \
+            --controller-source compute/riyadh_general.py \
+            --disable-model --compare-pid --quiet \
+            --unseen-start 300 --unseen-count 100 \
+            --output checkpoints/general/preview-v1-ci-test-100.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: natural20-general-controller-test-100
+          path: checkpoints/general/preview-v1-ci-test-100.json
+          if-no-files-found: error
