@@ -1,0 +1,153 @@
+name: Natural-20 Targeted Hard-Segment Refinement
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [controls-challenge-compute]
+    paths: [.github/workflows/natural-targeted-refine.yml]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: natural-20-targeted-hard-refine
+  cancel-in-progress: false
+
+jobs:
+  refine:
+    strategy:
+      fail-fast: false
+      max-parallel: 6
+      matrix:
+        segment: [2, 3, 6, 8, 9, 10]
+    runs-on: ubuntu-latest
+    timeout-minutes: 355
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: controls-challenge-compute
+      - name: Checkout official challenge
+        run: git clone --depth 1 https://github.com/commaai/controls_challenge.git official
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - name: Install runtime
+        run: python -m pip install --upgrade pip pandas numpy onnxruntime matplotlib seaborn tqdm
+      - name: Prepare data, optimizer, and refined checkpoint
+        env:
+          SEGMENT: ${{ matrix.segment }}
+        run: |
+          cp compute/optimize_natural_cem.py official/optimize_natural_cem.py
+          cp compute/optimize_natural_hybrid.py official/optimize_natural_hybrid.py
+          cp compute/optimize_natural_coordinate.py official/optimize_natural_coordinate.py
+          cp compute/natural_colab_worker.py official/natural_colab_worker.py
+          cp compute/riyadh_pid.py official/controllers/riyadh_pid.py
+          mkdir -p targeted
+          STEM=$(printf '%05d' "$SEGMENT")
+          base64 --decode "checkpoints/pilot/${STEM}.npy.b64" > "targeted/${STEM}.npy"
+          cd official
+          python -c "from tinyphysics import download_dataset; download_dataset()"
+      - name: Run protected targeted refinement
+        working-directory: official
+        env:
+          SEGMENT: ${{ matrix.segment }}
+        run: |
+          END=$((SEGMENT + 1))
+          python -u natural_colab_worker.py \
+            --data_dir data --model_path models/tinyphysics.onnx \
+            --out_dir ../targeted --start "$SEGMENT" --end "$END" \
+            --time_budget_minutes 340 --provider CPUExecutionProvider \
+            --method coordinate --coordinate_iterations 16 \
+            --coordinate_spacings 80,40,20,10,5,2,1 \
+            --coordinate_deltas 0.240,0.160,0.100,0.060,0.035,0.020,0.010 \
+            --coordinate_batch_size 256 --refine
+          STEM=$(printf '%05d' "$SEGMENT")
+          mv ../targeted/progress.jsonl "../targeted/${STEM}.jsonl"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: natural20-targeted-${{ matrix.segment }}
+          path: |
+            targeted/*.npy
+            targeted/*.jsonl
+          if-no-files-found: error
+
+  collect:
+    needs: refine
+    if: ${{ always() && !cancelled() }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: controls-challenge-compute
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: natural20-targeted-*
+          path: collected
+          merge-multiple: true
+      - name: Verify, merge, and persist targeted pilot
+        run: |
+          python - <<'PY'
+          import glob, json, pathlib
+
+          target_records = []
+          for path in sorted(glob.glob('collected/*.jsonl')):
+            with open(path, encoding='utf-8') as stream:
+              target_records.extend(json.loads(line) for line in stream if line.strip())
+          if len(target_records) != 6 or any(r.get('status') != 'completed' for r in target_records):
+            raise SystemExit(f'incomplete targeted refinement: {len(target_records)} records')
+          if any(float(r['stock_cost']) > float(r['previous_stock_cost']) + 1e-9 for r in target_records):
+            raise SystemExit('protected targeted refinement regressed a segment')
+
+          root = pathlib.Path('checkpoints/pilot')
+          existing = []
+          refined_path = root / 'refined-progress.jsonl'
+          if refined_path.exists():
+            with refined_path.open(encoding='utf-8') as stream:
+              existing = [json.loads(line) for line in stream if line.strip()]
+          latest = {r['segment']: r for r in existing}
+          for record in target_records:
+            latest[record['segment']] = record
+          merged = [latest[f'{segment:05d}'] for segment in range(1, 11)]
+          costs = [float(r['stock_cost']) for r in merged]
+          previous_target = [float(r['previous_stock_cost']) for r in target_records]
+          target_costs = [float(r['stock_cost']) for r in target_records]
+
+          (root / 'refined-progress.jsonl').write_text(
+            ''.join(json.dumps(r, sort_keys=True) + '\n' for r in merged),
+            encoding='utf-8',
+          )
+          summary = {
+            'segments': len(costs),
+            'mean': sum(costs) / len(costs),
+            'targeted_segments': len(target_costs),
+            'targeted_mean': sum(target_costs) / len(target_costs),
+            'targeted_previous_mean': sum(previous_target) / len(previous_target),
+            'best': min(costs),
+            'worst': max(costs),
+            'under_20': sum(c < 20 for c in costs),
+          }
+          (root / 'refined-summary.json').write_text(
+            json.dumps(summary, indent=2, sort_keys=True) + '\n',
+            encoding='utf-8',
+          )
+          (root / 'targeted-progress.jsonl').write_text(
+            ''.join(json.dumps(r, sort_keys=True) + '\n' for r in target_records),
+            encoding='utf-8',
+          )
+          print(summary)
+          PY
+          for file in collected/*.npy; do
+            stem=$(basename "$file" .npy)
+            base64 -w 0 "$file" > "checkpoints/pilot/${stem}.npy.b64"
+            printf '\n' >> "checkpoints/pilot/${stem}.npy.b64"
+          done
+          git config user.name "Natural-20 Targeted Refiner"
+          git config user.email "actions@users.noreply.github.com"
+          git add checkpoints/pilot
+          git commit -m "Target Natural-20 hard pilot segments [skip compute]"
+          git push
+      - uses: actions/upload-artifact@v4
+        with:
+          name: natural20-targeted-summary
+          path: checkpoints/pilot
