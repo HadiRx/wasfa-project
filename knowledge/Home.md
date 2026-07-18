@@ -1,7 +1,7 @@
 ---
 type: dashboard
 project: Riyadh Natural-20
-updated_at: 2026-07-18T06:48:24+00:00
+updated_at: 2026-07-18T06:53:42+00:00
 official_submission_score: null
 ---
 
@@ -22,6 +22,7 @@ official_submission_score: null
 - [[Evidence/GitHub-Runs|GitHub execution history]]
 - [[Submission/Controller-Design|Controller design]]
 - [[Submission/Checklist|Official submission checklist]]
+- [[Project-Discovery-Answers|Repository-backed discovery answers]]
 - [[Sources/Comma-Official|Official comma sources]]
 - [[Templates/Experiment|New experiment template]]
 

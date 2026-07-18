@@ -183,6 +183,7 @@ official_submission_score: null
 - [[Evidence/GitHub-Runs|GitHub execution history]]
 - [[Submission/Controller-Design|Controller design]]
 - [[Submission/Checklist|Official submission checklist]]
+- [[Project-Discovery-Answers|Repository-backed discovery answers]]
 - [[Sources/Comma-Official|Official comma sources]]
 - [[Templates/Experiment|New experiment template]]
 
