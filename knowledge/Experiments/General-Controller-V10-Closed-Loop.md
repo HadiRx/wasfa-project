@@ -1,7 +1,7 @@
 ---
 type: experiment
 scope: general-controller-v10
-status: awaiting-ci
+status: verified-ci
 date: 2026-07-18
 baseline: V8
 ---
@@ -10,9 +10,9 @@ baseline: V8
 
 ## Outcome
 
-V10 is a provisional promotion candidate. It passed local development and a
-separate final 100-segment test, but remains `awaiting-ci` until GitHub Actions
-reproduces both gates. This is a pilot result, not the official 5000 score.
+V10 is the active general-controller candidate. GitHub Actions reproduced both
+100-segment gates exactly and archived the raw results and deploy model. This
+is still a pilot result, not the official 5000 score.
 
 ## Controller
 
@@ -76,8 +76,14 @@ was only `5.793210`; all aggregate promotion checks passed.
 - `checkpoints/general/v10-scale08-gate-test.json`
 - `checkpoints/general/v10-package-parity.json`
 
-## Next gate
+## CI verification
 
-GitHub Actions must rebuild the inverse model, run both 100-segment comparisons,
-and archive the deploy model plus raw JSON. Only then may V10 become the active
-general-controller candidate. The 5000-segment evaluation remains blocked.
+- Run: [Natural-20 General Controller Evaluation #5](https://github.com/HadiRx/wasfa-project/actions/runs/29652798809)
+- Commit: `e937bb1a6e39b6d3373d410eb9d19595e612b5fe`
+- Artifact: [natural20-general-controller-v10-robustness](https://github.com/HadiRx/wasfa-project/actions/runs/29652798809/artifacts/8432014649)
+- Artifact SHA-256: `215a63d6038e659adb4ad478525e4c1148b80271386e6848b42d48bc8faf8bc4`
+- Unit tests: `13/13` passed.
+- Development and final-test gates: both `passed: true`.
+
+The next gate is a broader preflight evaluation before the official 5000 run.
+The 5000-segment evaluation remains blocked until that preflight is reviewed.

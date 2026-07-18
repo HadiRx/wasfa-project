@@ -11,10 +11,12 @@ status: implemented-pilot
 It uses only ordinary `update()` inputs and causal memory; it contains no
 fingerprint, route ID, data path, or per-segment action table. General V8 adds
 a capped linear inverse feedforward term to the protected PID-plus-preview
-feedback. The inverse model is reproducibly trained from public warmup rows on
-a segment-level split by `compute/train_warmup_inverse.py`; CI evaluates it on
-segments `16500`–`16599`, outside both inverse-model splits. It is not yet an
-official-5000 result.
+feedback. General V10 adds a bounded 17-parameter linear residual trained
+directly on closed-loop cost and packaged with an effective correction limit
+of `0.04`. The inverse model is reproducibly trained from public warmup rows on
+a segment-level split by `compute/train_warmup_inverse.py`. CI run
+`29652798809` verified V10 on `16500`–`16599` and `18500`–`18599`, outside the
+training and validation splits. It is not yet an official-5000 result.
 
 ## Per-segment lookup track
 
