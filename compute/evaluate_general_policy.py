@@ -97,7 +97,7 @@ def main(args):
   totals = np.asarray([record["total_cost"] for record in records])
   summary = {
     "scope": "held_out_segments",
-    "controller_variant": "analytic_feedback" if args.disable_model else "residual_mlp",
+    "controller_variant": "analytic_feedback" if args.disable_model else "residual_policy",
     "segments": len(records),
     "mean_total_cost": float(totals.mean()),
     "median_total_cost": float(np.median(totals)),

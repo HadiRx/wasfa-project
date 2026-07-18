@@ -1,0 +1,39 @@
+{
+  "baseline": "checkpoints/general/v10-scale08-hard-10.json",
+  "baseline_metrics": {
+    "mean": 416.3325503186279,
+    "median": 246.53073664975366,
+    "worst": 1435.0721939941177
+  },
+  "candidate": "checkpoints/general/v10-packaged-hard-10.json",
+  "candidate_metrics": {
+    "mean": 416.3325503186279,
+    "median": 246.53073664975366,
+    "worst": 1435.0721939941177
+  },
+  "change_percent": {
+    "mean": 0.0,
+    "median": 0.0,
+    "worst": 0.0
+  },
+  "checks": {
+    "mean": true,
+    "median": true,
+    "regressed_segments": true,
+    "worst": true
+  },
+  "passed": true,
+  "regressed_segments": 0,
+  "segments": 10,
+  "tolerances": {
+    "max_regressed_segments": 0,
+    "mean_percent": 0.0,
+    "median_percent": 0.0,
+    "segment_epsilon": 1e-09,
+    "worst_percent": 0.0
+  },
+  "worst_regression": {
+    "delta": 0.0,
+    "segment": "16500"
+  }
+}

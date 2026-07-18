@@ -1,0 +1,8 @@
+{
+  "output": "checkpoints/general/models/v10-closed-loop-deploy.npz",
+  "output_scale": 0.8,
+  "output_sha256": "9a28c3b7e466f61590e9c177324a9f38449be8dcd053e4d4925d43bd8b4a7b27",
+  "scope": "closed-loop-residual-deployment-package",
+  "source": "checkpoints/general/models/v10-closed-loop-conservative.npz",
+  "source_sha256": "bc08b20d50e5f5e77ae742edf2af1758fc03d7f037c48acc303094ad7b37c00e"
+}

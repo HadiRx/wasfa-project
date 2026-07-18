@@ -1,6 +1,7 @@
 import importlib.util
 from pathlib import Path
 import sys
+import tempfile
 import types
 import unittest
 
@@ -68,6 +69,24 @@ class GeneralControllerTests(unittest.TestCase):
     policy = self.module.ResidualMLP(ROOT / "does-not-exist.npz")
     self.assertFalse(policy.available)
     self.assertEqual(policy.predict(np.zeros(self.module.FEATURE_COUNT)), 0.0)
+
+  def test_linear_closed_loop_policy_loads_and_is_bounded(self):
+    count = self.module.FEATURE_COUNT
+    with tempfile.TemporaryDirectory() as directory:
+      path = Path(directory) / "linear-residual.npz"
+      np.savez_compressed(
+        path,
+        feature_mean=np.zeros(count, dtype=np.float32),
+        feature_scale=np.ones(count, dtype=np.float32),
+        linear_weights=np.ones(count, dtype=np.float32),
+        linear_bias=np.asarray([0.0], dtype=np.float32),
+        residual_limit=np.asarray([0.2], dtype=np.float32),
+        output_scale=np.asarray([0.8], dtype=np.float32),
+      )
+      policy = self.module.ResidualMLP(path)
+      self.assertTrue(policy.available)
+      self.assertLessEqual(policy.predict(np.ones(count)), 0.160001)
+      self.assertGreaterEqual(policy.predict(-np.ones(count)), -0.160001)
 
   def test_inverse_features_are_finite(self):
     features = self.module.inverse_features(0.2, State(), Plan())

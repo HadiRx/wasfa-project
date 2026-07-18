@@ -33,3 +33,7 @@ The formal promotion decision is [[Decisions/Reject-V9-Candidates]].
 
 The extreme-failure trace analysis and rejected V10 causal rules are recorded
 in [[Diagnosis/V10-Extreme-Failures]].
+
+The first closed-loop residual to pass local development and final-test gates
+is documented in [[Experiments/General-Controller-V10-Closed-Loop]]. Its
+provisional promotion rule is [[Decisions/Promote-V10-After-CI]].

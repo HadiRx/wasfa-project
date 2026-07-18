@@ -8,6 +8,10 @@ on:
       - compute/riyadh_general.py
       - compute/evaluate_general_policy.py
       - compute/train_warmup_inverse.py
+      - compute/train_closed_loop_residual.py
+      - compute/package_closed_loop_residual.py
+      - compute/compare_general_runs.py
+      - checkpoints/general/models/v10-closed-loop-deploy.npz
       - .github/workflows/natural-general-controller.yml
 
 jobs:
@@ -34,19 +38,64 @@ jobs:
             --train-start 0 --train-count 5000 \
             --validation-start 10000 --validation-count 500 \
             --output official/models/riyadh_inverse_linear.npz
-      - name: Evaluate route-agnostic controller on unseen segments
+      - name: Run controller tests
+        run: python -m unittest discover -s tests -v
+      - name: Evaluate V8 baseline on development segments
         run: |
           python -u compute/evaluate_general_policy.py \
             --official-dir official \
             --controller-source compute/riyadh_general.py \
-            --disable-model --compare-pid --quiet \
+            --disable-model --quiet \
             --unseen-start 16500 --unseen-count 100 \
-            --output checkpoints/general/inverse-v8-ci-test-100.json
+            --output checkpoints/general/v10-ci-v8-dev.json
+      - name: Evaluate V10 on development segments
+        run: |
+          python -u compute/evaluate_general_policy.py \
+            --official-dir official \
+            --controller-source compute/riyadh_general.py \
+            --model checkpoints/general/models/v10-closed-loop-deploy.npz \
+            --unseen-start 16500 --unseen-count 100 --quiet \
+            --output checkpoints/general/v10-ci-candidate-dev.json
+      - name: Gate V10 development result
+        run: |
+          python compute/compare_general_runs.py \
+            --baseline checkpoints/general/v10-ci-v8-dev.json \
+            --candidate checkpoints/general/v10-ci-candidate-dev.json \
+            --output checkpoints/general/v10-ci-gate-dev.json
+      - name: Evaluate V8 baseline on untouched test segments
+        run: |
+          python -u compute/evaluate_general_policy.py \
+            --official-dir official \
+            --controller-source compute/riyadh_general.py \
+            --disable-model --quiet \
+            --unseen-start 18500 --unseen-count 100 \
+            --output checkpoints/general/v10-ci-v8-test.json
+      - name: Evaluate V10 on untouched test segments
+        run: |
+          python -u compute/evaluate_general_policy.py \
+            --official-dir official \
+            --controller-source compute/riyadh_general.py \
+            --model checkpoints/general/models/v10-closed-loop-deploy.npz \
+            --unseen-start 18500 --unseen-count 100 --quiet \
+            --output checkpoints/general/v10-ci-candidate-test.json
+      - name: Gate V10 untouched test result
+        run: |
+          python compute/compare_general_runs.py \
+            --baseline checkpoints/general/v10-ci-v8-test.json \
+            --candidate checkpoints/general/v10-ci-candidate-test.json \
+            --output checkpoints/general/v10-ci-gate-test.json
       - uses: actions/upload-artifact@v4
         with:
-          name: natural20-general-controller-v8-test-100
+          name: natural20-general-controller-v10-robustness
           path: |
-            checkpoints/general/inverse-v8-ci-test-100.json
+            checkpoints/general/v10-ci-v8-dev.json
+            checkpoints/general/v10-ci-candidate-dev.json
+            checkpoints/general/v10-ci-gate-dev.json
+            checkpoints/general/v10-ci-v8-test.json
+            checkpoints/general/v10-ci-candidate-test.json
+            checkpoints/general/v10-ci-gate-test.json
+            checkpoints/general/models/v10-closed-loop-deploy.npz
+            checkpoints/general/models/v10-closed-loop-deploy.json
             official/models/riyadh_inverse_linear.npz
             official/models/riyadh_inverse_linear.json
           if-no-files-found: error

@@ -3,7 +3,9 @@
 The controller uses only ``Controller.update`` inputs and causal memory.  It
 contains no route identifier, fingerprint, data path, or action lookup table.
 V8 blends stable PID-plus-preview feedback with a compact inverse feedforward
-model trained on the public warmup rows, then caps that feedforward term.
+model trained on the public warmup rows. V10 optionally adds a bounded linear
+residual trained on closed-loop rollouts and packaged with a conservative
+deployment scale. With no residual artifact, behavior remains V8-compatible.
 """
 
 from __future__ import annotations
@@ -126,16 +128,45 @@ class ResidualMLP:
     with np.load(path, allow_pickle=False) as archive:
       self.feature_mean = archive["feature_mean"].astype(np.float32)
       self.feature_scale = archive["feature_scale"].astype(np.float32)
-      self.w1 = archive["w1"].astype(np.float32)
-      self.b1 = archive["b1"].astype(np.float32)
-      self.w2 = archive["w2"].astype(np.float32)
-      self.b2 = archive["b2"].astype(np.float32)
-      self.w3 = archive["w3"].astype(np.float32)
-      self.b3 = archive["b3"].astype(np.float32)
+      self.linear = "linear_weights" in archive.files
+      if self.linear:
+        self.linear_weights = archive["linear_weights"].astype(np.float32)
+        self.linear_bias = float(
+          np.asarray(archive["linear_bias"]).reshape(-1)[0]
+        )
+      else:
+        self.w1 = archive["w1"].astype(np.float32)
+        self.b1 = archive["b1"].astype(np.float32)
+        self.w2 = archive["w2"].astype(np.float32)
+        self.b2 = archive["b2"].astype(np.float32)
+        self.w3 = archive["w3"].astype(np.float32)
+        self.b3 = archive["b3"].astype(np.float32)
       self.residual_limit = float(np.asarray(archive["residual_limit"]).reshape(-1)[0])
+      self.output_scale = (
+        float(np.asarray(archive["output_scale"]).reshape(-1)[0])
+        if "output_scale" in archive.files else 1.0
+      )
+      archived_ood_start = (
+        float(np.asarray(archive["ood_gate_start"]).reshape(-1)[0])
+        if "ood_gate_start" in archive.files else float("inf")
+      )
+      archived_ood_width = (
+        float(np.asarray(archive["ood_gate_width"]).reshape(-1)[0])
+        if "ood_gate_width" in archive.files else 1.0
+      )
+      self.ood_gate_start = float(os.getenv(
+        "RIYADH_GENERAL_OOD_GATE_START", str(archived_ood_start)
+      ))
+      self.ood_gate_width = float(os.getenv(
+        "RIYADH_GENERAL_OOD_GATE_WIDTH", str(archived_ood_width)
+      ))
     if self.feature_mean.shape != (FEATURE_COUNT,):
       raise ValueError("general policy feature count mismatch")
-    if self.w1.shape[0] != FEATURE_COUNT or self.w3.shape[1] != 1:
+    if self.linear and self.linear_weights.shape != (FEATURE_COUNT,):
+      raise ValueError("invalid linear residual weights")
+    if not self.linear and (
+      self.w1.shape[0] != FEATURE_COUNT or self.w3.shape[1] != 1
+    ):
       raise ValueError("invalid general policy weights")
     self.available = True
 
@@ -143,10 +174,27 @@ class ResidualMLP:
     if not self.available:
       return 0.0
     x = (features - self.feature_mean) / self.feature_scale
+    if self.linear:
+      value = float(x @ self.linear_weights + self.linear_bias)
+      gate = 1.0
+      if np.isfinite(self.ood_gate_start):
+        distance = float(np.max(np.abs(x)))
+        gate = float(np.clip(
+          (self.ood_gate_start + max(self.ood_gate_width, 1e-6) - distance)
+          / max(self.ood_gate_width, 1e-6),
+          0.0,
+          1.0,
+        ))
+      return float(
+        np.tanh(value) * self.residual_limit * self.output_scale * gate
+      )
     x = np.tanh(x @ self.w1 + self.b1)
     x = np.tanh(x @ self.w2 + self.b2)
     residual = float((x @ self.w3 + self.b3)[0])
-    return float(np.clip(residual, -self.residual_limit, self.residual_limit))
+    return float(
+      np.clip(residual, -self.residual_limit, self.residual_limit)
+      * self.output_scale
+    )
 
 
 class InverseLinear:
