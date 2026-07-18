@@ -7,6 +7,7 @@ on:
     paths:
       - compute/riyadh_general.py
       - compute/evaluate_general_policy.py
+      - compute/train_warmup_inverse.py
       - .github/workflows/natural-general-controller.yml
 
 jobs:
@@ -26,16 +27,26 @@ jobs:
       - name: Download official dataset
         working-directory: official
         run: python -c "from tinyphysics import download_dataset; download_dataset()"
+      - name: Train reproducible inverse model
+        run: |
+          python -u compute/train_warmup_inverse.py \
+            --data-dir official/data \
+            --train-start 0 --train-count 5000 \
+            --validation-start 10000 --validation-count 500 \
+            --output official/models/riyadh_inverse_linear.npz
       - name: Evaluate route-agnostic controller on unseen segments
         run: |
           python -u compute/evaluate_general_policy.py \
             --official-dir official \
             --controller-source compute/riyadh_general.py \
             --disable-model --compare-pid --quiet \
-            --unseen-start 300 --unseen-count 100 \
-            --output checkpoints/general/preview-v1-ci-test-100.json
+            --unseen-start 16500 --unseen-count 100 \
+            --output checkpoints/general/inverse-v8-ci-test-100.json
       - uses: actions/upload-artifact@v4
         with:
-          name: natural20-general-controller-test-100
-          path: checkpoints/general/preview-v1-ci-test-100.json
+          name: natural20-general-controller-v8-test-100
+          path: |
+            checkpoints/general/inverse-v8-ci-test-100.json
+            official/models/riyadh_inverse_linear.npz
+            official/models/riyadh_inverse_linear.json
           if-no-files-found: error

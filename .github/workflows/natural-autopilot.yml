@@ -8,7 +8,11 @@ on:
       - controls-challenge-compute
     paths:
       - checkpoints/00000.npy.b64
-      - compute/**
+      - compute/optimize_natural_cem.py
+      - compute/optimize_natural_hybrid.py
+      - compute/optimize_natural_coordinate.py
+      - compute/natural_colab_worker.py
+      - compute/riyadh_pid.py
       - .github/workflows/natural-autopilot.yml
 
 concurrency:

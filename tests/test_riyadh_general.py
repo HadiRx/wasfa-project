@@ -69,6 +69,28 @@ class GeneralControllerTests(unittest.TestCase):
     self.assertFalse(policy.available)
     self.assertEqual(policy.predict(np.zeros(self.module.FEATURE_COUNT)), 0.0)
 
+  def test_inverse_features_are_finite(self):
+    features = self.module.inverse_features(0.2, State(), Plan())
+    self.assertEqual(features.shape, (self.module.INVERSE_FEATURE_COUNT,))
+    self.assertTrue(np.isfinite(features).all())
+
+  def test_missing_inverse_model_is_safe(self):
+    inverse = self.module.InverseLinear(ROOT / "missing-inverse.npz")
+    self.assertFalse(inverse.available)
+    self.assertEqual(
+      inverse.predict(np.zeros(self.module.INVERSE_FEATURE_COUNT)), 0.0
+    )
+
+  def test_v8_defaults(self):
+    controller = self.module.Controller()
+    self.assertEqual(controller.inverse_scale, 0.5)
+    self.assertEqual(controller.inverse_limit, 1.0)
+
+  def test_deadband_is_symmetric(self):
+    self.assertEqual(self.module.deadband(0.01, 0.02), 0.0)
+    self.assertAlmostEqual(self.module.deadband(0.05, 0.02), 0.03)
+    self.assertAlmostEqual(self.module.deadband(-0.05, 0.02), -0.03)
+
 
 if __name__ == "__main__":
   unittest.main()

@@ -22,3 +22,6 @@ Acceptance gates:
 
 The first implementation and evidence are in
 [[Experiments/General-Controller-V1]].
+
+The rebuilt inverse-feedforward candidate and its recovery limitations are in
+[[Experiments/General-Controller-V8-Recovery]].

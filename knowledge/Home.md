@@ -1,7 +1,7 @@
 ---
 type: dashboard
 project: Riyadh Natural-20
-updated_at: 2026-07-18T08:00:37+00:00
+updated_at: 2026-07-18T12:36:03+00:00
 official_submission_score: null
 ---
 
@@ -10,7 +10,7 @@ official_submission_score: null
 > [!info] Current truth
 > The best verified checkpoint for segment `00000` is **19.691418**.
 > The mean across the **11 available per-segment checkpoints** is
-> **31.846522**, with **5** below 20. This is not a leaderboard result.
+> **21.026704**, with **5** below 20. This is not a leaderboard result.
 
 ## Navigation
 

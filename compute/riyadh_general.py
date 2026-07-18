@@ -1,10 +1,9 @@
-"""General causal controller for the comma Controls Challenge.
+"""Route-agnostic causal controller for comma Controls Challenge v2.
 
-The policy uses only values supplied to ``Controller.update``.  It contains no
-route identifiers, fingerprints, data paths, or per-segment action table.  A
-small NumPy MLP predicts a residual on top of a stable feedback controller.
-Training is performed offline by ``train_general_policy.py`` and exports a
-portable ``.npz`` artifact.
+The controller uses only ``Controller.update`` inputs and causal memory.  It
+contains no route identifier, fingerprint, data path, or action lookup table.
+V8 blends stable PID-plus-preview feedback with a compact inverse feedforward
+model trained on the public warmup rows, then caps that feedforward term.
 """
 
 from __future__ import annotations
@@ -16,16 +15,19 @@ import numpy as np
 
 try:
   from . import BaseController
-except ImportError:  # Allows offline trainer imports before submission packaging.
+except ImportError:
   class BaseController:
     pass
 
 
-CONTROL_CONTEXT_CALLS = 80
 STEER_LIMIT = 2.0
 FEATURE_COUNT = 16
+INVERSE_FEATURE_COUNT = 17
 DEFAULT_MODEL = (
   Path(__file__).resolve().parent.parent / "models" / "riyadh_general_policy.npz"
+)
+DEFAULT_INVERSE_MODEL = (
+  Path(__file__).resolve().parent.parent / "models" / "riyadh_inverse_linear.npz"
 )
 
 
@@ -43,7 +45,6 @@ def policy_features(
   previous_error,
   previous_action,
 ):
-  """Return route-agnostic features available at controller runtime."""
   target = float(target_lataccel)
   current = float(current_lataccel)
   error = target - current
@@ -75,13 +76,46 @@ def policy_features(
   ], dtype=np.float32)
 
 
-def feedback_action(error, error_integral, error_diff, target, preview_delta, roll):
-  """Official PID-equivalent fallback and residual-policy anchor."""
-  return float(
-    0.195 * error
-    + 0.100 * error_integral
-    - 0.053 * error_diff
-  )
+def inverse_features(target_lataccel, state, future_plan):
+  target = float(target_lataccel)
+  future_target = list(future_plan.lataccel)
+  future_roll = list(future_plan.roll_lataccel)
+
+  def at(values, index, fallback):
+    return float(values[index]) if len(values) > index else float(fallback)
+
+  target_1 = at(future_target, 0, target)
+  target_2 = at(future_target, 1, target_1)
+  target_5 = at(future_target, 4, target_2)
+  target_10 = at(future_target, 9, target_5)
+  target_20 = at(future_target, 19, target_10)
+  roll_1 = at(future_roll, 0, state.roll_lataccel)
+  speed = float(state.v_ego)
+  net = target_1 - roll_1
+  return np.asarray([
+    target,
+    target_1,
+    target_2,
+    target_5,
+    target_10,
+    target_20,
+    target_1 - target,
+    target_5 - target,
+    float(state.roll_lataccel),
+    roll_1,
+    speed,
+    float(state.a_ego),
+    net / (speed * speed + 1.0),
+    net / (speed + 1.0),
+    abs(target_1),
+    target_1 * speed,
+    float(state.roll_lataccel) * speed,
+  ], dtype=np.float32)
+
+
+def deadband(value, width):
+  magnitude = max(abs(float(value)) - max(float(width), 0.0), 0.0)
+  return float(np.copysign(magnitude, value))
 
 
 class ResidualMLP:
@@ -98,8 +132,7 @@ class ResidualMLP:
       self.b2 = archive["b2"].astype(np.float32)
       self.w3 = archive["w3"].astype(np.float32)
       self.b3 = archive["b3"].astype(np.float32)
-      residual_limit = archive["residual_limit"]
-      self.residual_limit = float(np.asarray(residual_limit).reshape(-1)[0])
+      self.residual_limit = float(np.asarray(archive["residual_limit"]).reshape(-1)[0])
     if self.feature_mean.shape != (FEATURE_COUNT,):
       raise ValueError("general policy feature count mismatch")
     if self.w1.shape[0] != FEATURE_COUNT or self.w3.shape[1] != 1:
@@ -116,11 +149,39 @@ class ResidualMLP:
     return float(np.clip(residual, -self.residual_limit, self.residual_limit))
 
 
+class InverseLinear:
+  def __init__(self, path):
+    self.available = False
+    if not Path(path).exists():
+      return
+    with np.load(path, allow_pickle=False) as archive:
+      self.feature_mean = archive["feature_mean"].astype(np.float32)
+      self.feature_scale = archive["feature_scale"].astype(np.float32)
+      self.weights = archive["weights"].astype(np.float32)
+      self.bias = float(np.asarray(archive["bias"]).reshape(-1)[0])
+    if self.feature_mean.shape != (INVERSE_FEATURE_COUNT,):
+      raise ValueError("inverse model feature count mismatch")
+    if self.weights.shape != (INVERSE_FEATURE_COUNT,):
+      raise ValueError("invalid inverse model weights")
+    self.available = True
+
+  def predict(self, features):
+    if not self.available:
+      return 0.0
+    normalized = (features - self.feature_mean) / self.feature_scale
+    return float(np.clip(
+      normalized @ self.weights + self.bias, -STEER_LIMIT, STEER_LIMIT
+    ))
+
+
 class Controller(BaseController):
   def __init__(self):
-    model_path = Path(os.getenv("RIYADH_GENERAL_MODEL", str(DEFAULT_MODEL)))
-    self.policy = ResidualMLP(model_path)
-    self.calls = 0
+    self.policy = ResidualMLP(Path(os.getenv(
+      "RIYADH_GENERAL_MODEL", str(DEFAULT_MODEL)
+    )))
+    self.inverse = InverseLinear(Path(os.getenv(
+      "RIYADH_GENERAL_INVERSE_MODEL", str(DEFAULT_INVERSE_MODEL)
+    )))
     self.error_integral = 0.0
     self.previous_error = 0.0
     self.previous_action = 0.0
@@ -134,6 +195,8 @@ class Controller(BaseController):
     self.integral_limit = float(os.getenv("RIYADH_GENERAL_ILIMIT", "1000000.0"))
     self.action_delta_limit = float(os.getenv("RIYADH_GENERAL_ACTION_DELTA", "4.0"))
     self.residual_scale = float(os.getenv("RIYADH_GENERAL_RESIDUAL_SCALE", "1.0"))
+    self.inverse_scale = float(os.getenv("RIYADH_GENERAL_INVERSE_SCALE", "0.50"))
+    self.inverse_limit = float(os.getenv("RIYADH_GENERAL_INVERSE_LIMIT", "1.0"))
 
   def update(self, target_lataccel, current_lataccel, state, future_plan):
     error = float(target_lataccel - current_lataccel)
@@ -151,17 +214,25 @@ class Controller(BaseController):
       self.previous_error,
       self.previous_action,
     )
+    inverse = inverse_features(target_lataccel, state, future_plan)
     error_diff = error - self.previous_error
+    preview_signal = deadband(features[11], 0.0)
     base = float(
       self.kp * error
       + self.ki * self.error_integral
       + self.kd * error_diff
       + self.kff * float(target_lataccel)
-      + self.kpreview * float(features[11])
+      + self.kpreview * preview_signal
       + self.kroll * float(state.roll_lataccel)
     )
-    requested = base + self.residual_scale * self.policy.predict(features)
-
+    inverse_action = float(np.clip(
+      self.inverse.predict(inverse), -self.inverse_limit, self.inverse_limit
+    ))
+    requested = (
+      base
+      + self.inverse_scale * inverse_action
+      + self.residual_scale * self.policy.predict(features)
+    )
     action = float(np.clip(
       requested,
       self.previous_action - self.action_delta_limit,
@@ -170,5 +241,4 @@ class Controller(BaseController):
     action = float(np.clip(action, -STEER_LIMIT, STEER_LIMIT))
     self.previous_error = error
     self.previous_action = action
-    self.calls += 1
     return action
