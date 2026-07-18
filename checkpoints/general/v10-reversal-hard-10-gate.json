@@ -1,0 +1,39 @@
+{
+  "baseline": "checkpoints/general/v8-reversal-hard-10-baseline.json",
+  "baseline_metrics": {
+    "mean": 380.0734712247454,
+    "median": 254.96758214089513,
+    "worst": 1668.2279526771429
+  },
+  "candidate": "checkpoints/general/v10-reversal-hard-10.json",
+  "candidate_metrics": {
+    "mean": 385.0061669403218,
+    "median": 279.6310607187771,
+    "worst": 1668.2279526771429
+  },
+  "change_percent": {
+    "mean": 1.297826891122219,
+    "median": 9.673182124091738,
+    "worst": 0.0
+  },
+  "checks": {
+    "mean": false,
+    "median": false,
+    "regressed_segments": true,
+    "worst": true
+  },
+  "passed": false,
+  "regressed_segments": 1,
+  "segments": 10,
+  "tolerances": {
+    "max_regressed_segments": -1,
+    "mean_percent": 0.0,
+    "median_percent": 0.0,
+    "segment_epsilon": 1e-09,
+    "worst_percent": 0.0
+  },
+  "worst_regression": {
+    "delta": 49.32695715576392,
+    "segment": "16537"
+  }
+}

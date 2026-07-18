@@ -30,3 +30,6 @@ The V9 robustness campaign and its rejected candidates are in
 [[Experiments/General-Controller-V9-Robustness]]. V8 remains active until a
 later candidate passes both development and untouched-set promotion gates.
 The formal promotion decision is [[Decisions/Reject-V9-Candidates]].
+
+The extreme-failure trace analysis and rejected V10 causal rules are recorded
+in [[Diagnosis/V10-Extreme-Failures]].

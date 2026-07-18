@@ -1,0 +1,172 @@
+{
+  "16523": {
+    "action_saturation_count": 0,
+    "action_sign_changes": 4,
+    "cost": {
+      "jerk_cost": 65.34497709459995,
+      "lataccel_cost": 3.5517861287245425,
+      "total_cost": 242.9342835308271
+    },
+    "max_abs_error": 1.437293435749884,
+    "max_abs_integral": 11.251678433445166,
+    "max_abs_jerk": 5.0,
+    "speed_range": [
+      -0.0590985477995201,
+      13.996570490572458
+    ],
+    "target_range": [
+      -3.655907791369948,
+      0.7860123479556907
+    ],
+    "top_error_steps": [
+      317,
+      318,
+      316,
+      303,
+      302
+    ],
+    "top_jerk_steps": [
+      319,
+      312,
+      311,
+      320,
+      318
+    ]
+  },
+  "16537": {
+    "action_saturation_count": 0,
+    "action_sign_changes": 5,
+    "cost": {
+      "jerk_cost": 47.90870067769627,
+      "lataccel_cost": 4.381843601465338,
+      "total_cost": 267.0008807509632
+    },
+    "max_abs_error": 1.084842925113046,
+    "max_abs_integral": 4.987263225462114,
+    "max_abs_jerk": 3.5190615835777095,
+    "speed_range": [
+      22.299749729749376,
+      28.66449589489705
+    ],
+    "target_range": [
+      -1.2665252858116698,
+      1.3715251737327203
+    ],
+    "top_error_steps": [
+      322,
+      321,
+      299,
+      323,
+      300
+    ],
+    "top_jerk_steps": [
+      304,
+      325,
+      303,
+      324,
+      330
+    ]
+  },
+  "17511": {
+    "action_saturation_count": 2,
+    "action_sign_changes": 3,
+    "cost": {
+      "jerk_cost": 113.41311400062,
+      "lataccel_cost": 7.689191902827108,
+      "total_cost": 497.8727091419754
+    },
+    "max_abs_error": 1.9984122693247839,
+    "max_abs_integral": 13.64834280993448,
+    "max_abs_jerk": 5.0,
+    "speed_range": [
+      3.545806177396293,
+      14.436796806518506
+    ],
+    "target_range": [
+      -4.878442215637183,
+      0.1509503836139407
+    ],
+    "top_error_steps": [
+      335,
+      336,
+      334,
+      337,
+      338
+    ],
+    "top_jerk_steps": [
+      337,
+      338,
+      339,
+      340,
+      318
+    ]
+  },
+  "17558": {
+    "action_saturation_count": 0,
+    "action_sign_changes": 8,
+    "cost": {
+      "jerk_cost": 114.1976144838992,
+      "lataccel_cost": 6.240532413323465,
+      "total_cost": 426.22423515007245
+    },
+    "max_abs_error": 1.4881710375959551,
+    "max_abs_integral": 7.478776107804622,
+    "max_abs_jerk": 5.0,
+    "speed_range": [
+      27.854962635098666,
+      30.55185927564269
+    ],
+    "target_range": [
+      -2.5431450195510523,
+      2.3737614802537976
+    ],
+    "top_error_steps": [
+      356,
+      357,
+      355,
+      358,
+      350
+    ],
+    "top_jerk_steps": [
+      360,
+      359,
+      361,
+      354,
+      355
+    ]
+  },
+  "17565": {
+    "action_saturation_count": 0,
+    "action_sign_changes": 10,
+    "cost": {
+      "jerk_cost": 465.71367795272323,
+      "lataccel_cost": 24.050285494488392,
+      "total_cost": 1668.2279526771429
+    },
+    "max_abs_error": 1.858717072915593,
+    "max_abs_integral": 10.967327029207834,
+    "max_abs_jerk": 5.000000000000004,
+    "speed_range": [
+      27.160775085756857,
+      30.21079961818188
+    ],
+    "target_range": [
+      -3.466483873867935,
+      4.134998179327937
+    ],
+    "top_error_steps": [
+      217,
+      218,
+      202,
+      201,
+      200
+    ],
+    "top_jerk_steps": [
+      215,
+      182,
+      198,
+      189,
+      105
+    ]
+  }
+}
