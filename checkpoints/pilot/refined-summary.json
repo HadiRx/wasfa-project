@@ -1,8 +1,10 @@
 {
   "best": 2.6538518450996347,
-  "mean": 33.06203291836146,
-  "previous_mean": 48.335189680094565,
+  "mean": 21.160232491047385,
   "segments": 10,
+  "targeted_mean": 27.926079376354537,
+  "targeted_previous_mean": 47.762413421878,
+  "targeted_segments": 6,
   "under_20": 4,
-  "worst": 101.27793265725185
+  "worst": 36.93110333111767
 }
