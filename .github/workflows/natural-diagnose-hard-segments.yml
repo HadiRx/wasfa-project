@@ -37,7 +37,7 @@ jobs:
       - name: Diagnose hard pilot segments
         working-directory: official
         run: |
-          python ../compute/diagnose_natural_segments.py \
+          PYTHONPATH="$PWD" python ../compute/diagnose_natural_segments.py \
             --data_dir data \
             --model_path models/tinyphysics.onnx \
             --actions_dir ../checkpoints/pilot \
