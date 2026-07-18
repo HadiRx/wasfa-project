@@ -1,0 +1,39 @@
+{
+  "baseline": "checkpoints/official5000/preflight-v8-19000-19499.json",
+  "baseline_metrics": {
+    "mean": 68.60244790189559,
+    "median": 53.221169936134935,
+    "worst": 1798.0800657427128
+  },
+  "candidate": "checkpoints/official5000/preflight-v10-19000-19499.json",
+  "candidate_metrics": {
+    "mean": 66.90431906795237,
+    "median": 51.286843699922144,
+    "worst": 2675.1250346656425
+  },
+  "change_percent": {
+    "mean": -2.475318134961615,
+    "median": -3.6345052890306047,
+    "worst": 48.77674724460385
+  },
+  "checks": {
+    "mean": true,
+    "median": true,
+    "regressed_segments": true,
+    "worst": false
+  },
+  "passed": false,
+  "regressed_segments": 87,
+  "segments": 500,
+  "tolerances": {
+    "max_regressed_segments": -1,
+    "mean_percent": 0.0,
+    "median_percent": 0.0,
+    "segment_epsilon": 1e-09,
+    "worst_percent": 0.0
+  },
+  "worst_regression": {
+    "delta": 877.0449689229297,
+    "segment": "19084"
+  }
+}
