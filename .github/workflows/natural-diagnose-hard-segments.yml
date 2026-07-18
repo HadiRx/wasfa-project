@@ -1,0 +1,64 @@
+name: Natural-20 Hard-Segment Diagnosis
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [controls-challenge-compute]
+    paths:
+      - .github/workflows/natural-diagnose-hard-segments.yml
+      - compute/diagnose_natural_segments.py
+
+permissions:
+  contents: write
+
+concurrency:
+  group: natural-20-hard-segment-diagnosis
+  cancel-in-progress: false
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: controls-challenge-compute
+      - name: Checkout official challenge
+        run: git clone --depth 1 https://github.com/commaai/controls_challenge.git official
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - name: Install runtime
+        run: python -m pip install --upgrade pip pandas numpy onnxruntime matplotlib seaborn tqdm
+      - name: Download official data
+        working-directory: official
+        run: python -c "from tinyphysics import download_dataset; download_dataset()"
+      - name: Diagnose hard pilot segments
+        working-directory: official
+        run: |
+          python ../compute/diagnose_natural_segments.py \
+            --data_dir data \
+            --model_path models/tinyphysics.onnx \
+            --actions_dir ../checkpoints/pilot \
+            --segments 00002,00003,00006,00008,00009,00010 \
+            --out_dir ../knowledge/Diagnosis \
+            --trace_dir ../checkpoints/diagnosis
+      - name: Persist diagnosis
+        run: |
+          git config user.name "Natural-20 Diagnoser"
+          git config user.email "actions@users.noreply.github.com"
+          git add knowledge/Diagnosis checkpoints/diagnosis
+          if git diff --cached --quiet; then
+            echo "Diagnosis is already current."
+          else
+            git commit -m "Diagnose Natural-20 hard pilot segments [skip compute]"
+            git push
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: natural20-hard-segment-diagnosis
+          path: |
+            knowledge/Diagnosis
+            checkpoints/diagnosis
+          if-no-files-found: error
