@@ -41,6 +41,30 @@ jobs:
         working-directory: official
         run: python -c "from tinyphysics import download_dataset; download_dataset()"
 
+      - name: Validate selected data splits
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          ranges = {
+            'inverse_train': (0, 5000),
+            'inverse_validation': (10000, 500),
+            'v10_development': (16500, 100),
+            'v12_train': (12000, 200),
+            'v12_validation': (12300, 50),
+            'v12_development3': (12500, 100),
+            'v12_holdout3': (13000, 100),
+          }
+          root = Path('official/data')
+          missing = []
+          for name, (start, count) in ranges.items():
+            paths = [root / f'{idx:05d}.csv' for idx in range(start, start + count)]
+            absent = [str(path) for path in paths if not path.exists()]
+            print(f'{name}: start={start} count={count} missing={len(absent)}')
+            missing.extend(absent[:10])
+          if missing:
+            raise SystemExit('Missing selected dataset files: ' + ', '.join(missing))
+          PY
+
       - name: Train reproducible inverse model
         run: |
           python -u compute/train_warmup_inverse.py \
@@ -95,8 +119,8 @@ jobs:
             --official-dir official \
             --controller-source compute/riyadh_general.py \
             --inverse-model official/models/riyadh_inverse_linear.npz \
-            --train-start 20500 --train-count 200 \
-            --validation-start 21000 --validation-count 50 \
+            --train-start 12000 --train-count 200 \
+            --validation-start 12300 --validation-count 50 \
             --hidden1 32 --hidden2 16 \
             --epochs 24 --batch-size 2048 \
             --learning-rate 0.002 --weight-decay 0.0001 \
@@ -110,13 +134,13 @@ jobs:
             --official-dir official \
             --controller-source compute/riyadh_general.py \
             --model checkpoints/general/models/v10-ci-selected.npz \
-            --unseen-start 21500 --unseen-count 100 --quiet \
+            --unseen-start 12500 --unseen-count 100 --quiet \
             --output checkpoints/general/v12-v10-dev3.json
           python -u compute/evaluate_general_policy.py \
             --official-dir official \
             --controller-source compute/riyadh_general.py \
             --model checkpoints/general/models/v12-mlp-residual.npz \
-            --unseen-start 21500 --unseen-count 100 --quiet \
+            --unseen-start 12500 --unseen-count 100 --quiet \
             --output checkpoints/general/v12-candidate-dev3.json
 
       - name: Gate and freeze V12 on development-3
@@ -143,13 +167,13 @@ jobs:
             --official-dir official \
             --controller-source compute/riyadh_general.py \
             --model checkpoints/general/models/v10-ci-selected.npz \
-            --unseen-start 22500 --unseen-count 100 --quiet \
+            --unseen-start 13000 --unseen-count 100 --quiet \
             --output checkpoints/general/v12-v10-holdout3.json
           python -u compute/evaluate_general_policy.py \
             --official-dir official \
             --controller-source compute/riyadh_general.py \
             --model checkpoints/general/models/v12-selected.npz \
-            --unseen-start 22500 --unseen-count 100 --quiet \
+            --unseen-start 13000 --unseen-count 100 --quiet \
             --output checkpoints/general/v12-selected-holdout3.json
 
       - name: Gate frozen V12 against V10 on holdout-3
@@ -209,7 +233,7 @@ jobs:
           mkdir -p results
           cp checkpoints/general/v12-run-summary.json results/latest-v12-summary.json
           git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.email "41898282+github-actions-bot@users.noreply.github.com"
           git add results/latest-v12-summary.json
           if git diff --cached --quiet; then
             echo "No summary change to publish"
