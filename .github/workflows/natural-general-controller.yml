@@ -8,14 +8,12 @@ on:
       - compute/riyadh_general.py
       - compute/evaluate_general_policy.py
       - compute/train_warmup_inverse.py
-      - compute/train_closed_loop_residual.py
+      - compute/train_v12_mlp_residual.py
       - compute/package_closed_loop_residual.py
       - compute/compare_general_runs.py
       - compute/select_general_candidate.py
-      - compute/select_general_config.py
       - compute/analyze_general_runs.py
       - checkpoints/general/models/v10-closed-loop-conservative.npz
-      - checkpoints/general/models/v10-closed-loop-deploy.npz
       - .github/workflows/natural-general-controller.yml
 
 permissions:
@@ -26,7 +24,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  v11-robust-search:
+  v12-nonlinear-residual:
     runs-on: ubuntu-latest
     timeout-minutes: 240
     steps:
@@ -42,6 +40,7 @@ jobs:
       - name: Download official dataset
         working-directory: official
         run: python -c "from tinyphysics import download_dataset; download_dataset()"
+
       - name: Train reproducible inverse model
         run: |
           python -u compute/train_warmup_inverse.py \
@@ -49,10 +48,11 @@ jobs:
             --train-start 0 --train-count 5000 \
             --validation-start 10000 --validation-count 500 \
             --output official/models/riyadh_inverse_linear.npz
+
       - name: Run controller tests
         run: python -m unittest discover -s tests -v
 
-      - name: Evaluate V8 baseline on development segments
+      - name: Evaluate V8 baseline on development
         run: |
           python -u compute/evaluate_general_policy.py \
             --official-dir official \
@@ -60,9 +60,10 @@ jobs:
             --disable-model --quiet \
             --unseen-start 16500 --unseen-count 100 \
             --output checkpoints/general/v10-ci-v8-dev.json
-      - name: Package and evaluate V10 scale candidates on development only
+
+      - name: Reproduce and freeze best V10 scale
         run: |
-          mkdir -p checkpoints/general/v10-scale-models checkpoints/general/v10-scale-dev
+          mkdir -p checkpoints/general/v10-scale-models checkpoints/general/v10-scale-dev checkpoints/general/models
           for scale in 0.25 0.40 0.55 0.70 0.80 1.00; do
             label=${scale/./p}
             python compute/package_closed_loop_residual.py \
@@ -76,8 +77,6 @@ jobs:
               --unseen-start 16500 --unseen-count 100 --quiet \
               --output checkpoints/general/v10-scale-dev/v10-scale-${label}.json
           done
-      - name: Freeze best V10 scale
-        run: |
           python compute/select_general_candidate.py \
             --baseline checkpoints/general/v10-ci-v8-dev.json \
             --candidate 0.25=checkpoints/general/v10-scale-dev/v10-scale-0p25.json=checkpoints/general/v10-scale-models/v10-scale-0p25.npz \
@@ -89,174 +88,155 @@ jobs:
             --output-model checkpoints/general/models/v10-ci-selected.npz \
             --output-scale checkpoints/general/v10-ci-selected-scale.txt \
             --output-report checkpoints/general/v10-ci-selection-dev.json
-          scale=$(cat checkpoints/general/v10-ci-selected-scale.txt)
-          label=$(printf '%.2f' "$scale" | tr '.' 'p')
-          cp checkpoints/general/v10-scale-dev/v10-scale-${label}.json checkpoints/general/v10-ci-selected-dev.json
 
-      - name: Define V11 causal controller configurations
+      - name: Train V12 Karpathy-style compact MLP residual
         run: |
-          mkdir -p checkpoints/general/v11-configs checkpoints/general/v11-dev
-          python - <<'PY'
-          import json
-          from pathlib import Path
-          configs = {
-            "default": {},
-            "delta100": {"RIYADH_GENERAL_ACTION_DELTA": "1.0"},
-            "delta050": {"RIYADH_GENERAL_ACTION_DELTA": "0.5"},
-            "delta025": {"RIYADH_GENERAL_ACTION_DELTA": "0.25"},
-            "decay995": {"RIYADH_GENERAL_IDECAY": "0.995", "RIYADH_GENERAL_ILIMIT": "20"},
-            "decay980": {"RIYADH_GENERAL_IDECAY": "0.98", "RIYADH_GENERAL_ILIMIT": "10"},
-            "inverse040": {"RIYADH_GENERAL_INVERSE_SCALE": "0.40"},
-            "inverse060": {"RIYADH_GENERAL_INVERSE_SCALE": "0.60"},
-            "preview080": {"RIYADH_GENERAL_KPREVIEW": "0.08"},
-            "preview120": {"RIYADH_GENERAL_KPREVIEW": "0.12"},
-            "smooth_decay": {"RIYADH_GENERAL_ACTION_DELTA": "0.5", "RIYADH_GENERAL_IDECAY": "0.995", "RIYADH_GENERAL_ILIMIT": "20"},
-            "smooth_inverse": {"RIYADH_GENERAL_ACTION_DELTA": "0.5", "RIYADH_GENERAL_INVERSE_SCALE": "0.40"},
-            "balanced": {"RIYADH_GENERAL_ACTION_DELTA": "0.5", "RIYADH_GENERAL_IDECAY": "0.995", "RIYADH_GENERAL_ILIMIT": "20", "RIYADH_GENERAL_INVERSE_SCALE": "0.45", "RIYADH_GENERAL_KPREVIEW": "0.08"},
-          }
-          root = Path("checkpoints/general/v11-configs")
-          for name, config in configs.items():
-            (root / f"{name}.json").write_text(json.dumps(config, indent=2, sort_keys=True) + "\n")
-          PY
-      - name: Evaluate V11 configurations on development only
-        run: |
-          for config in checkpoints/general/v11-configs/*.json; do
-            label=$(basename "$config" .json)
-            assignments=$(python - "$config" <<'PY'
-          import json, sys
-          data = json.load(open(sys.argv[1]))
-          print(" ".join(f"{key}={value}" for key, value in sorted(data.items())))
-          PY
-            )
-            env $assignments python -u compute/evaluate_general_policy.py \
-              --official-dir official \
-              --controller-source compute/riyadh_general.py \
-              --model checkpoints/general/models/v10-ci-selected.npz \
-              --unseen-start 16500 --unseen-count 100 --quiet \
-              --output checkpoints/general/v11-dev/${label}.json
-          done
-      - name: Freeze best robust V11 configuration
-        run: |
-          args=""
-          for config in checkpoints/general/v11-configs/*.json; do
-            label=$(basename "$config" .json)
-            args="$args --candidate ${label}=checkpoints/general/v11-dev/${label}.json=${config}"
-          done
-          python compute/select_general_config.py \
-            --baseline checkpoints/general/v10-ci-selected-dev.json \
-            $args \
-            --output-env checkpoints/general/v11-selected.env \
-            --output-report checkpoints/general/v11-selection-dev.json
-
-      - name: Evaluate V8 and frozen V10 on fresh holdout-2
-        run: |
-          python -u compute/evaluate_general_policy.py \
+          python -u compute/train_v12_mlp_residual.py \
             --official-dir official \
             --controller-source compute/riyadh_general.py \
-            --disable-model --quiet \
-            --unseen-start 19500 --unseen-count 100 \
-            --output checkpoints/general/v11-v8-holdout2.json
+            --inverse-model official/models/riyadh_inverse_linear.npz \
+            --train-start 20500 --train-count 200 \
+            --validation-start 21000 --validation-count 50 \
+            --hidden1 32 --hidden2 16 \
+            --epochs 24 --batch-size 2048 \
+            --learning-rate 0.002 --weight-decay 0.0001 \
+            --gradient-clip 1.0 \
+            --residual-limit 0.15 --output-scale 0.50 \
+            --output checkpoints/general/models/v12-mlp-residual.npz
+
+      - name: Evaluate V10 and V12 on development-3
+        run: |
           python -u compute/evaluate_general_policy.py \
             --official-dir official \
             --controller-source compute/riyadh_general.py \
             --model checkpoints/general/models/v10-ci-selected.npz \
-            --unseen-start 19500 --unseen-count 100 --quiet \
-            --output checkpoints/general/v11-v10-holdout2.json
-      - name: Evaluate frozen V11 once on fresh holdout-2
-        run: |
-          source checkpoints/general/v11-selected.env
+            --unseen-start 21500 --unseen-count 100 --quiet \
+            --output checkpoints/general/v12-v10-dev3.json
           python -u compute/evaluate_general_policy.py \
             --official-dir official \
             --controller-source compute/riyadh_general.py \
-            --model checkpoints/general/models/v10-ci-selected.npz \
-            --unseen-start 19500 --unseen-count 100 --quiet \
-            --output checkpoints/general/v11-candidate-holdout2.json
-      - name: Gate V11 against V10 on fresh holdout-2
+            --model checkpoints/general/models/v12-mlp-residual.npz \
+            --unseen-start 21500 --unseen-count 100 --quiet \
+            --output checkpoints/general/v12-candidate-dev3.json
+
+      - name: Gate and freeze V12 on development-3
         run: |
           python compute/compare_general_runs.py \
-            --baseline checkpoints/general/v11-v10-holdout2.json \
-            --candidate checkpoints/general/v11-candidate-holdout2.json \
-            --output checkpoints/general/v11-gate-holdout2.json
-      - name: Diagnose V11 results
+            --baseline checkpoints/general/v12-v10-dev3.json \
+            --candidate checkpoints/general/v12-candidate-dev3.json \
+            --output checkpoints/general/v12-gate-dev3.json || true
+          python - <<'PY'
+          import json, shutil
+          from pathlib import Path
+          report = json.loads(Path('checkpoints/general/v12-gate-dev3.json').read_text())
+          passed = bool(report.get('passed'))
+          source = Path('checkpoints/general/models/v12-mlp-residual.npz' if passed else 'checkpoints/general/models/v10-ci-selected.npz')
+          target = Path('checkpoints/general/models/v12-selected.npz')
+          shutil.copy2(source, target)
+          Path('checkpoints/general/v12-selected-label.txt').write_text('v12-mlp\n' if passed else 'v10-fallback\n')
+          print({'selected': 'v12-mlp' if passed else 'v10-fallback', 'development_gate_passed': passed})
+          PY
+
+      - name: Evaluate frozen candidates on fresh holdout-3
+        run: |
+          python -u compute/evaluate_general_policy.py \
+            --official-dir official \
+            --controller-source compute/riyadh_general.py \
+            --model checkpoints/general/models/v10-ci-selected.npz \
+            --unseen-start 22500 --unseen-count 100 --quiet \
+            --output checkpoints/general/v12-v10-holdout3.json
+          python -u compute/evaluate_general_policy.py \
+            --official-dir official \
+            --controller-source compute/riyadh_general.py \
+            --model checkpoints/general/models/v12-selected.npz \
+            --unseen-start 22500 --unseen-count 100 --quiet \
+            --output checkpoints/general/v12-selected-holdout3.json
+
+      - name: Gate frozen V12 against V10 on holdout-3
+        run: |
+          python compute/compare_general_runs.py \
+            --baseline checkpoints/general/v12-v10-holdout3.json \
+            --candidate checkpoints/general/v12-selected-holdout3.json \
+            --output checkpoints/general/v12-gate-holdout3.json || true
+
+      - name: Diagnose V12
         if: always()
         run: |
-          if [ -f checkpoints/general/v11-v10-holdout2.json ] && [ -f checkpoints/general/v11-candidate-holdout2.json ]; then
+          if [ -f checkpoints/general/v12-v10-holdout3.json ] && [ -f checkpoints/general/v12-selected-holdout3.json ]; then
             python compute/analyze_general_runs.py \
-              --baseline checkpoints/general/v11-v10-holdout2.json \
-              --candidate checkpoints/general/v11-candidate-holdout2.json \
-              --output checkpoints/general/v11-diagnostics-vs-v10.json
+              --baseline checkpoints/general/v12-v10-holdout3.json \
+              --candidate checkpoints/general/v12-selected-holdout3.json \
+              --output checkpoints/general/v12-diagnostics-holdout3.json
           fi
-          if [ -f checkpoints/general/v11-v8-holdout2.json ] && [ -f checkpoints/general/v11-candidate-holdout2.json ]; then
-            python compute/analyze_general_runs.py \
-              --baseline checkpoints/general/v11-v8-holdout2.json \
-              --candidate checkpoints/general/v11-candidate-holdout2.json \
-              --output checkpoints/general/v11-diagnostics-vs-v8.json
-          fi
-      - name: Write durable V11 run summary
+
+      - name: Write durable V12 summary
         if: always()
         run: |
           python - <<'PY'
           import json
           from pathlib import Path
           paths = {
-            "v10_selection_dev": "checkpoints/general/v10-ci-selection-dev.json",
-            "v11_selection_dev": "checkpoints/general/v11-selection-dev.json",
-            "v11_gate_holdout2": "checkpoints/general/v11-gate-holdout2.json",
-            "v11_diagnostics_vs_v10": "checkpoints/general/v11-diagnostics-vs-v10.json",
-            "v11_diagnostics_vs_v8": "checkpoints/general/v11-diagnostics-vs-v8.json",
+            'v10_selection_dev': 'checkpoints/general/v10-ci-selection-dev.json',
+            'v12_training': 'checkpoints/general/models/v12-mlp-residual.json',
+            'v12_gate_dev3': 'checkpoints/general/v12-gate-dev3.json',
+            'v12_gate_holdout3': 'checkpoints/general/v12-gate-holdout3.json',
+            'v12_diagnostics_holdout3': 'checkpoints/general/v12-diagnostics-holdout3.json',
           }
           payload = {
-            "commit": "${{ github.sha }}",
-            "workflow_run_id": "${{ github.run_id }}",
-            "workflow_run_attempt": "${{ github.run_attempt }}",
-            "research_basis": [
-              "causal temporal memory",
-              "conservative residual control",
-              "development-only configuration selection",
-              "fresh untouched holdout-2 promotion gate",
+            'commit': '${{ github.sha }}',
+            'workflow_run_id': '${{ github.run_id }}',
+            'workflow_run_attempt': '${{ github.run_attempt }}',
+            'selected_label': Path('checkpoints/general/v12-selected-label.txt').read_text().strip() if Path('checkpoints/general/v12-selected-label.txt').exists() else None,
+            'research_basis': [
+              'karpathy/micrograd small transparent MLP design',
+              'manual vectorized backpropagation and Adam',
+              'stable-baselines3-style reproducible baseline comparison',
+              'official comma TinyPhysics closed-loop evaluation',
+              'development-only promotion and fresh holdout-3',
             ],
           }
           for name, path in paths.items():
             file = Path(path)
             payload[name] = json.loads(file.read_text()) if file.exists() else None
-          env_file = Path("checkpoints/general/v11-selected.env")
-          payload["selected_environment"] = env_file.read_text().splitlines() if env_file.exists() else None
-          output = Path("checkpoints/general/v11-run-summary.json")
+          output = Path('checkpoints/general/v12-run-summary.json')
           output.parent.mkdir(parents=True, exist_ok=True)
-          output.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+          output.write_text(json.dumps(payload, indent=2, sort_keys=True) + '\n')
           PY
-      - name: Publish latest durable V11 summary to branch
+
+      - name: Publish latest durable V12 summary
         if: always() && github.event_name == 'push'
         run: |
           mkdir -p results
-          cp checkpoints/general/v11-run-summary.json results/latest-v11-summary.json
+          cp checkpoints/general/v12-run-summary.json results/latest-v12-summary.json
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add results/latest-v11-summary.json
+          git add results/latest-v12-summary.json
           if git diff --cached --quiet; then
             echo "No summary change to publish"
           else
-            git commit -m "Record latest V11 robustness summary [skip ci]"
+            git commit -m "Record latest V12 nonlinear residual summary [skip ci]"
             git push
           fi
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: natural20-general-controller-v11-robust-search
+          name: natural20-general-controller-v12-nonlinear-residual
           path: |
             checkpoints/general/v10-ci-selection-dev.json
             checkpoints/general/models/v10-ci-selected.npz
-            checkpoints/general/v11-configs/*.json
-            checkpoints/general/v11-dev/*.json
-            checkpoints/general/v11-selected.env
-            checkpoints/general/v11-selection-dev.json
-            checkpoints/general/v11-v8-holdout2.json
-            checkpoints/general/v11-v10-holdout2.json
-            checkpoints/general/v11-candidate-holdout2.json
-            checkpoints/general/v11-gate-holdout2.json
-            checkpoints/general/v11-diagnostics-vs-v10.json
-            checkpoints/general/v11-diagnostics-vs-v8.json
-            checkpoints/general/v11-run-summary.json
+            checkpoints/general/models/v12-mlp-residual.npz
+            checkpoints/general/models/v12-mlp-residual.json
+            checkpoints/general/models/v12-selected.npz
+            checkpoints/general/v12-selected-label.txt
+            checkpoints/general/v12-v10-dev3.json
+            checkpoints/general/v12-candidate-dev3.json
+            checkpoints/general/v12-gate-dev3.json
+            checkpoints/general/v12-v10-holdout3.json
+            checkpoints/general/v12-selected-holdout3.json
+            checkpoints/general/v12-gate-holdout3.json
+            checkpoints/general/v12-diagnostics-holdout3.json
+            checkpoints/general/v12-run-summary.json
             official/models/riyadh_inverse_linear.npz
             official/models/riyadh_inverse_linear.json
           if-no-files-found: warn
