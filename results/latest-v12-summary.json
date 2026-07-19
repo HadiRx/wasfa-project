@@ -1,0 +1,248 @@
+{
+  "commit": "83451497c20ce9a56f9568b196d42450246af7b5",
+  "research_basis": [
+    "karpathy/micrograd small transparent MLP design",
+    "manual vectorized backpropagation and Adam",
+    "stable-baselines3-style reproducible baseline comparison",
+    "official comma TinyPhysics closed-loop evaluation",
+    "development-only promotion and fresh holdout-3"
+  ],
+  "selected_label": null,
+  "v10_selection_dev": {
+    "baseline": "checkpoints/general/v10-ci-v8-dev.json",
+    "candidates": [
+      {
+        "baseline": "checkpoints/general/v10-ci-v8-dev.json",
+        "baseline_metrics": {
+          "mean": 55.310089753209795,
+          "median": 48.867802298305186,
+          "worst": 267.0008807509632
+        },
+        "candidate": "checkpoints/general/v10-scale-dev/v10-scale-0p25.json",
+        "candidate_metrics": {
+          "mean": 54.752342959324054,
+          "median": 47.96971665919005,
+          "worst": 259.1109169993192
+        },
+        "change_percent": {
+          "mean": -1.0083997266581428,
+          "median": -1.8377860204003584,
+          "worst": -2.955032855866525
+        },
+        "checks": {
+          "mean": true,
+          "median": true,
+          "regressed_segments": true,
+          "worst": true
+        },
+        "model": "checkpoints/general/v10-scale-models/v10-scale-0p25.npz",
+        "passed": true,
+        "regressed_segments": 30,
+        "scale": 0.25,
+        "segments": 100,
+        "worst_regression": {
+          "delta": 5.213579813560159,
+          "segment": "16523"
+        }
+      },
+      {
+        "baseline": "checkpoints/general/v10-ci-v8-dev.json",
+        "baseline_metrics": {
+          "mean": 55.310089753209795,
+          "median": 48.867802298305186,
+          "worst": 267.0008807509632
+        },
+        "candidate": "checkpoints/general/v10-scale-dev/v10-scale-0p40.json",
+        "candidate_metrics": {
+          "mean": 54.31493650920292,
+          "median": 48.47870792707857,
+          "worst": 252.8614523239944
+        },
+        "change_percent": {
+          "mean": -1.799225509210316,
+          "median": -0.7962182724147464,
+          "worst": -5.295648608798745
+        },
+        "checks": {
+          "mean": true,
+          "median": true,
+          "regressed_segments": true,
+          "worst": true
+        },
+        "model": "checkpoints/general/v10-scale-models/v10-scale-0p40.npz",
+        "passed": true,
+        "regressed_segments": 29,
+        "scale": 0.4,
+        "segments": 100,
+        "worst_regression": {
+          "delta": 4.152149212702099,
+          "segment": "16530"
+        }
+      },
+      {
+        "baseline": "checkpoints/general/v10-ci-v8-dev.json",
+        "baseline_metrics": {
+          "mean": 55.310089753209795,
+          "median": 48.867802298305186,
+          "worst": 267.0008807509632
+        },
+        "candidate": "checkpoints/general/v10-scale-dev/v10-scale-0p55.json",
+        "candidate_metrics": {
+          "mean": 53.50323956825594,
+          "median": 48.62883038258787,
+          "worst": 236.29716000718457
+        },
+        "change_percent": {
+          "mean": -3.266764152826195,
+          "median": -0.4890171124507529,
+          "worst": -11.49948294455873
+        },
+        "checks": {
+          "mean": true,
+          "median": true,
+          "regressed_segments": true,
+          "worst": true
+        },
+        "model": "checkpoints/general/v10-scale-models/v10-scale-0p55.npz",
+        "passed": true,
+        "regressed_segments": 17,
+        "scale": 0.55,
+        "segments": 100,
+        "worst_regression": {
+          "delta": 3.5243386161144628,
+          "segment": "16530"
+        }
+      },
+      {
+        "baseline": "checkpoints/general/v10-ci-v8-dev.json",
+        "baseline_metrics": {
+          "mean": 55.310089753209795,
+          "median": 48.867802298305186,
+          "worst": 267.0008807509632
+        },
+        "candidate": "checkpoints/general/v10-scale-dev/v10-scale-0p70.json",
+        "candidate_metrics": {
+          "mean": 53.41728647748119,
+          "median": 48.551076800134865,
+          "worst": 236.4538281056396
+        },
+        "change_percent": {
+          "mean": -3.4221663428393887,
+          "median": -0.6481271579125331,
+          "worst": -11.440805947683524
+        },
+        "checks": {
+          "mean": true,
+          "median": true,
+          "regressed_segments": true,
+          "worst": true
+        },
+        "model": "checkpoints/general/v10-scale-models/v10-scale-0p70.npz",
+        "passed": true,
+        "regressed_segments": 15,
+        "scale": 0.7,
+        "segments": 100,
+        "worst_regression": {
+          "delta": 2.887966684529104,
+          "segment": "16554"
+        }
+      },
+      {
+        "baseline": "checkpoints/general/v10-ci-v8-dev.json",
+        "baseline_metrics": {
+          "mean": 55.310089753209795,
+          "median": 48.867802298305186,
+          "worst": 267.0008807509632
+        },
+        "candidate": "checkpoints/general/v10-scale-dev/v10-scale-0p80.json",
+        "candidate_metrics": {
+          "mean": 53.30552473055621,
+          "median": 48.223051098150066,
+          "worst": 236.12907149115478
+        },
+        "change_percent": {
+          "mean": -3.624230283476003,
+          "median": -1.319378342859264,
+          "worst": -11.562437237277553
+        },
+        "checks": {
+          "mean": true,
+          "median": true,
+          "regressed_segments": true,
+          "worst": true
+        },
+        "model": "checkpoints/general/v10-scale-models/v10-scale-0p80.npz",
+        "passed": true,
+        "regressed_segments": 19,
+        "scale": 0.8,
+        "segments": 100,
+        "worst_regression": {
+          "delta": 2.5390372242943613,
+          "segment": "16530"
+        }
+      },
+      {
+        "baseline": "checkpoints/general/v10-ci-v8-dev.json",
+        "baseline_metrics": {
+          "mean": 55.310089753209795,
+          "median": 48.867802298305186,
+          "worst": 267.0008807509632
+        },
+        "candidate": "checkpoints/general/v10-scale-dev/v10-scale-1p00.json",
+        "candidate_metrics": {
+          "mean": 52.375180516017025,
+          "median": 47.84783258668075,
+          "worst": 217.70656207356691
+        },
+        "change_percent": {
+          "mean": -5.306281819986467,
+          "median": -2.0872019277605367,
+          "worst": -18.462230738247644
+        },
+        "checks": {
+          "mean": true,
+          "median": true,
+          "regressed_segments": true,
+          "worst": true
+        },
+        "model": "checkpoints/general/v10-scale-models/v10-scale-1p00.npz",
+        "passed": true,
+        "regressed_segments": 16,
+        "scale": 1.0,
+        "segments": 100,
+        "worst_regression": {
+          "delta": 3.499481804989003,
+          "segment": "16544"
+        }
+      }
+    ],
+    "passed": true,
+    "selected_change_percent": {
+      "mean": -5.306281819986467,
+      "median": -2.0872019277605367,
+      "worst": -18.462230738247644
+    },
+    "selected_metrics": {
+      "mean": 52.375180516017025,
+      "median": 47.84783258668075,
+      "worst": 217.70656207356691
+    },
+    "selected_output_model": "checkpoints/general/models/v10-ci-selected.npz",
+    "selected_scale": 1.0,
+    "selected_source_model": "checkpoints/general/v10-scale-models/v10-scale-1p00.npz",
+    "selection_scope": "development-only",
+    "tolerances": {
+      "max_regressed_segments": -1,
+      "mean_percent": 0.0,
+      "median_percent": 0.0,
+      "segment_epsilon": 1e-09,
+      "worst_percent": 0.0
+    }
+  },
+  "v12_diagnostics_holdout3": null,
+  "v12_gate_dev3": null,
+  "v12_gate_holdout3": null,
+  "v12_training": null,
+  "workflow_run_attempt": "1",
+  "workflow_run_id": "29708146985"
+}
