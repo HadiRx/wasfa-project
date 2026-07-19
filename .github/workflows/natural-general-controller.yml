@@ -11,13 +11,15 @@ on:
       - compute/train_closed_loop_residual.py
       - compute/package_closed_loop_residual.py
       - compute/compare_general_runs.py
+      - compute/select_general_candidate.py
+      - checkpoints/general/models/v10-closed-loop-conservative.npz
       - checkpoints/general/models/v10-closed-loop-deploy.npz
       - .github/workflows/natural-general-controller.yml
 
 jobs:
   unseen-100:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 180
     steps:
       - uses: actions/checkout@v4
       - name: Checkout official challenge
@@ -48,20 +50,41 @@ jobs:
             --disable-model --quiet \
             --unseen-start 16500 --unseen-count 100 \
             --output checkpoints/general/v10-ci-v8-dev.json
-      - name: Evaluate V10 on development segments
+      - name: Package development scale candidates
         run: |
-          python -u compute/evaluate_general_policy.py \
-            --official-dir official \
-            --controller-source compute/riyadh_general.py \
-            --model checkpoints/general/models/v10-closed-loop-deploy.npz \
-            --unseen-start 16500 --unseen-count 100 --quiet \
-            --output checkpoints/general/v10-ci-candidate-dev.json
-      - name: Gate V10 development result
+          mkdir -p checkpoints/general/v10-scale-models
+          for scale in 0.25 0.40 0.55 0.70 0.80 1.00; do
+            label=${scale/./p}
+            python compute/package_closed_loop_residual.py \
+              --source checkpoints/general/models/v10-closed-loop-conservative.npz \
+              --output checkpoints/general/v10-scale-models/v10-scale-${label}.npz \
+              --output-scale ${scale}
+          done
+      - name: Evaluate V10 scale candidates on development segments only
         run: |
-          python compute/compare_general_runs.py \
+          mkdir -p checkpoints/general/v10-scale-dev
+          for scale in 0.25 0.40 0.55 0.70 0.80 1.00; do
+            label=${scale/./p}
+            python -u compute/evaluate_general_policy.py \
+              --official-dir official \
+              --controller-source compute/riyadh_general.py \
+              --model checkpoints/general/v10-scale-models/v10-scale-${label}.npz \
+              --unseen-start 16500 --unseen-count 100 --quiet \
+              --output checkpoints/general/v10-scale-dev/v10-scale-${label}.json
+          done
+      - name: Freeze best passing development candidate
+        run: |
+          python compute/select_general_candidate.py \
             --baseline checkpoints/general/v10-ci-v8-dev.json \
-            --candidate checkpoints/general/v10-ci-candidate-dev.json \
-            --output checkpoints/general/v10-ci-gate-dev.json
+            --candidate 0.25=checkpoints/general/v10-scale-dev/v10-scale-0p25.json=checkpoints/general/v10-scale-models/v10-scale-0p25.npz \
+            --candidate 0.40=checkpoints/general/v10-scale-dev/v10-scale-0p40.json=checkpoints/general/v10-scale-models/v10-scale-0p40.npz \
+            --candidate 0.55=checkpoints/general/v10-scale-dev/v10-scale-0p55.json=checkpoints/general/v10-scale-models/v10-scale-0p55.npz \
+            --candidate 0.70=checkpoints/general/v10-scale-dev/v10-scale-0p70.json=checkpoints/general/v10-scale-models/v10-scale-0p70.npz \
+            --candidate 0.80=checkpoints/general/v10-scale-dev/v10-scale-0p80.json=checkpoints/general/v10-scale-models/v10-scale-0p80.npz \
+            --candidate 1.00=checkpoints/general/v10-scale-dev/v10-scale-1p00.json=checkpoints/general/v10-scale-models/v10-scale-1p00.npz \
+            --output-model checkpoints/general/models/v10-ci-selected.npz \
+            --output-scale checkpoints/general/v10-ci-selected-scale.txt \
+            --output-report checkpoints/general/v10-ci-selection-dev.json
       - name: Evaluate V8 baseline on untouched test segments
         run: |
           python -u compute/evaluate_general_policy.py \
@@ -70,32 +93,53 @@ jobs:
             --disable-model --quiet \
             --unseen-start 18500 --unseen-count 100 \
             --output checkpoints/general/v10-ci-v8-test.json
-      - name: Evaluate V10 on untouched test segments
+      - name: Evaluate frozen V10 candidate once on untouched test segments
         run: |
           python -u compute/evaluate_general_policy.py \
             --official-dir official \
             --controller-source compute/riyadh_general.py \
-            --model checkpoints/general/models/v10-closed-loop-deploy.npz \
+            --model checkpoints/general/models/v10-ci-selected.npz \
             --unseen-start 18500 --unseen-count 100 --quiet \
             --output checkpoints/general/v10-ci-candidate-test.json
-      - name: Gate V10 untouched test result
+      - name: Gate frozen V10 untouched test result
         run: |
           python compute/compare_general_runs.py \
             --baseline checkpoints/general/v10-ci-v8-test.json \
             --candidate checkpoints/general/v10-ci-candidate-test.json \
             --output checkpoints/general/v10-ci-gate-test.json
+      - name: Write permanent-readable run summary artifact
+        if: always()
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          paths = {
+            "selection_dev": "checkpoints/general/v10-ci-selection-dev.json",
+            "gate_test": "checkpoints/general/v10-ci-gate-test.json",
+          }
+          payload = {"commit": "${{ github.sha }}"}
+          for name, path in paths.items():
+            file = Path(path)
+            payload[name] = json.loads(file.read_text()) if file.exists() else None
+          Path("checkpoints/general/v10-ci-run-summary.json").write_text(
+            json.dumps(payload, indent=2, sort_keys=True) + "\n"
+          )
+          PY
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
-          name: natural20-general-controller-v10-robustness
+          name: natural20-general-controller-v10-scale-selection
           path: |
             checkpoints/general/v10-ci-v8-dev.json
-            checkpoints/general/v10-ci-candidate-dev.json
-            checkpoints/general/v10-ci-gate-dev.json
+            checkpoints/general/v10-scale-dev/*.json
+            checkpoints/general/v10-ci-selection-dev.json
+            checkpoints/general/v10-ci-selected-scale.txt
+            checkpoints/general/models/v10-ci-selected.npz
             checkpoints/general/v10-ci-v8-test.json
             checkpoints/general/v10-ci-candidate-test.json
             checkpoints/general/v10-ci-gate-test.json
-            checkpoints/general/models/v10-closed-loop-deploy.npz
-            checkpoints/general/models/v10-closed-loop-deploy.json
+            checkpoints/general/v10-ci-run-summary.json
             official/models/riyadh_inverse_linear.npz
             official/models/riyadh_inverse_linear.json
-          if-no-files-found: error
+          if-no-files-found: warn
