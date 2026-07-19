@@ -1,0 +1,1213 @@
+{
+  "commit": "5f34c60e4203b1f168f12f48ff4b19c458da33aa",
+  "research_basis": [
+    "causal temporal memory",
+    "conservative residual control",
+    "development-only configuration selection",
+    "fresh untouched holdout-2 promotion gate"
+  ],
+  "selected_environment": [
+    ""
+  ],
+  "v10_selection_dev": {
+    "baseline": "checkpoints/general/v10-ci-v8-dev.json",
+    "candidates": [
+      {
+        "baseline": "checkpoints/general/v10-ci-v8-dev.json",
+        "baseline_metrics": {
+          "mean": 55.310089753209795,
+          "median": 48.867802298305186,
+          "worst": 267.0008807509632
+        },
+        "candidate": "checkpoints/general/v10-scale-dev/v10-scale-0p25.json",
+        "candidate_metrics": {
+          "mean": 54.752342959324054,
+          "median": 47.96971665919005,
+          "worst": 259.1109169993192
+        },
+        "change_percent": {
+          "mean": -1.0083997266581428,
+          "median": -1.8377860204003584,
+          "worst": -2.955032855866525
+        },
+        "checks": {
+          "mean": true,
+          "median": true,
+          "regressed_segments": true,
+          "worst": true
+        },
+        "model": "checkpoints/general/v10-scale-models/v10-scale-0p25.npz",
+        "passed": true,
+        "regressed_segments": 30,
+        "scale": 0.25,
+        "segments": 100,
+        "worst_regression": {
+          "delta": 5.213579813560159,
+          "segment": "16523"
+        }
+      },
+      {
+        "baseline": "checkpoints/general/v10-ci-v8-dev.json",
+        "baseline_metrics": {
+          "mean": 55.310089753209795,
+          "median": 48.867802298305186,
+          "worst": 267.0008807509632
+        },
+        "candidate": "checkpoints/general/v10-scale-dev/v10-scale-0p40.json",
+        "candidate_metrics": {
+          "mean": 54.31493650920292,
+          "median": 48.47870792707857,
+          "worst": 252.8614523239944
+        },
+        "change_percent": {
+          "mean": -1.799225509210316,
+          "median": -0.7962182724147464,
+          "worst": -5.295648608798745
+        },
+        "checks": {
+          "mean": true,
+          "median": true,
+          "regressed_segments": true,
+          "worst": true
+        },
+        "model": "checkpoints/general/v10-scale-models/v10-scale-0p40.npz",
+        "passed": true,
+        "regressed_segments": 29,
+        "scale": 0.4,
+        "segments": 100,
+        "worst_regression": {
+          "delta": 4.152149212702099,
+          "segment": "16530"
+        }
+      },
+      {
+        "baseline": "checkpoints/general/v10-ci-v8-dev.json",
+        "baseline_metrics": {
+          "mean": 55.310089753209795,
+          "median": 48.867802298305186,
+          "worst": 267.0008807509632
+        },
+        "candidate": "checkpoints/general/v10-scale-dev/v10-scale-0p55.json",
+        "candidate_metrics": {
+          "mean": 53.50323956825594,
+          "median": 48.62883038258787,
+          "worst": 236.29716000718457
+        },
+        "change_percent": {
+          "mean": -3.266764152826195,
+          "median": -0.4890171124507529,
+          "worst": -11.49948294455873
+        },
+        "checks": {
+          "mean": true,
+          "median": true,
+          "regressed_segments": true,
+          "worst": true
+        },
+        "model": "checkpoints/general/v10-scale-models/v10-scale-0p55.npz",
+        "passed": true,
+        "regressed_segments": 17,
+        "scale": 0.55,
+        "segments": 100,
+        "worst_regression": {
+          "delta": 3.5243386161144628,
+          "segment": "16530"
+        }
+      },
+      {
+        "baseline": "checkpoints/general/v10-ci-v8-dev.json",
+        "baseline_metrics": {
+          "mean": 55.310089753209795,
+          "median": 48.867802298305186,
+          "worst": 267.0008807509632
+        },
+        "candidate": "checkpoints/general/v10-scale-dev/v10-scale-0p70.json",
+        "candidate_metrics": {
+          "mean": 53.41728647748119,
+          "median": 48.551076800134865,
+          "worst": 236.4538281056396
+        },
+        "change_percent": {
+          "mean": -3.4221663428393887,
+          "median": -0.6481271579125331,
+          "worst": -11.440805947683524
+        },
+        "checks": {
+          "mean": true,
+          "median": true,
+          "regressed_segments": true,
+          "worst": true
+        },
+        "model": "checkpoints/general/v10-scale-models/v10-scale-0p70.npz",
+        "passed": true,
+        "regressed_segments": 15,
+        "scale": 0.7,
+        "segments": 100,
+        "worst_regression": {
+          "delta": 2.887966684529104,
+          "segment": "16554"
+        }
+      },
+      {
+        "baseline": "checkpoints/general/v10-ci-v8-dev.json",
+        "baseline_metrics": {
+          "mean": 55.310089753209795,
+          "median": 48.867802298305186,
+          "worst": 267.0008807509632
+        },
+        "candidate": "checkpoints/general/v10-scale-dev/v10-scale-0p80.json",
+        "candidate_metrics": {
+          "mean": 53.30552473055621,
+          "median": 48.223051098150066,
+          "worst": 236.12907149115478
+        },
+        "change_percent": {
+          "mean": -3.624230283476003,
+          "median": -1.319378342859264,
+          "worst": -11.562437237277553
+        },
+        "checks": {
+          "mean": true,
+          "median": true,
+          "regressed_segments": true,
+          "worst": true
+        },
+        "model": "checkpoints/general/v10-scale-models/v10-scale-0p80.npz",
+        "passed": true,
+        "regressed_segments": 19,
+        "scale": 0.8,
+        "segments": 100,
+        "worst_regression": {
+          "delta": 2.5390372242943613,
+          "segment": "16530"
+        }
+      },
+      {
+        "baseline": "checkpoints/general/v10-ci-v8-dev.json",
+        "baseline_metrics": {
+          "mean": 55.310089753209795,
+          "median": 48.867802298305186,
+          "worst": 267.0008807509632
+        },
+        "candidate": "checkpoints/general/v10-scale-dev/v10-scale-1p00.json",
+        "candidate_metrics": {
+          "mean": 52.375180516017025,
+          "median": 47.84783258668075,
+          "worst": 217.70656207356691
+        },
+        "change_percent": {
+          "mean": -5.306281819986467,
+          "median": -2.0872019277605367,
+          "worst": -18.462230738247644
+        },
+        "checks": {
+          "mean": true,
+          "median": true,
+          "regressed_segments": true,
+          "worst": true
+        },
+        "model": "checkpoints/general/v10-scale-models/v10-scale-1p00.npz",
+        "passed": true,
+        "regressed_segments": 16,
+        "scale": 1.0,
+        "segments": 100,
+        "worst_regression": {
+          "delta": 3.499481804989003,
+          "segment": "16544"
+        }
+      }
+    ],
+    "passed": true,
+    "selected_change_percent": {
+      "mean": -5.306281819986467,
+      "median": -2.0872019277605367,
+      "worst": -18.462230738247644
+    },
+    "selected_metrics": {
+      "mean": 52.375180516017025,
+      "median": 47.84783258668075,
+      "worst": 217.70656207356691
+    },
+    "selected_output_model": "checkpoints/general/models/v10-ci-selected.npz",
+    "selected_scale": 1.0,
+    "selected_source_model": "checkpoints/general/v10-scale-models/v10-scale-1p00.npz",
+    "selection_scope": "development-only",
+    "tolerances": {
+      "max_regressed_segments": -1,
+      "mean_percent": 0.0,
+      "median_percent": 0.0,
+      "segment_epsilon": 1e-09,
+      "worst_percent": 0.0
+    }
+  },
+  "v11_diagnostics_vs_v10": {
+    "baseline": "checkpoints/general/v11-v10-holdout2.json",
+    "baseline_metrics": {
+      "mean": 59.890438052155005,
+      "median": 47.78733183039412,
+      "p90": 91.60586083843177,
+      "worst": 659.8415442940322
+    },
+    "candidate": "checkpoints/general/v11-candidate-holdout2.json",
+    "candidate_metrics": {
+      "mean": 59.890438052155005,
+      "median": 47.78733183039412,
+      "p90": 91.60586083843177,
+      "worst": 659.8415442940322
+    },
+    "improved_segments": 0,
+    "regressed_segments": 0,
+    "segments": 100,
+    "top_improvements": [
+      {
+        "baseline_total_cost": 77.2466751419506,
+        "candidate_jerk_cost": 26.810192656176433,
+        "candidate_lataccel_cost": 1.0087296497154834,
+        "candidate_total_cost": 77.2466751419506,
+        "delta": 0.0,
+        "segment": "19500"
+      },
+      {
+        "baseline_total_cost": 144.4199764600868,
+        "candidate_jerk_cost": 44.622985240065724,
+        "candidate_lataccel_cost": 1.9959398244004212,
+        "candidate_total_cost": 144.4199764600868,
+        "delta": 0.0,
+        "segment": "19501"
+      },
+      {
+        "baseline_total_cost": 31.378015217714776,
+        "candidate_jerk_cost": 14.016977009075527,
+        "candidate_lataccel_cost": 0.347220764172785,
+        "candidate_total_cost": 31.378015217714776,
+        "delta": 0.0,
+        "segment": "19502"
+      },
+      {
+        "baseline_total_cost": 128.98419302141184,
+        "candidate_jerk_cost": 57.57904975725321,
+        "candidate_lataccel_cost": 1.4281028652831727,
+        "candidate_total_cost": 128.98419302141184,
+        "delta": 0.0,
+        "segment": "19503"
+      },
+      {
+        "baseline_total_cost": 29.417592849009853,
+        "candidate_jerk_cost": 8.135258995357866,
+        "candidate_lataccel_cost": 0.42564667707303977,
+        "candidate_total_cost": 29.417592849009853,
+        "delta": 0.0,
+        "segment": "19504"
+      },
+      {
+        "baseline_total_cost": 55.769324522483274,
+        "candidate_jerk_cost": 17.908586036881392,
+        "candidate_lataccel_cost": 0.7572147697120377,
+        "candidate_total_cost": 55.769324522483274,
+        "delta": 0.0,
+        "segment": "19505"
+      },
+      {
+        "baseline_total_cost": 77.73973337271171,
+        "candidate_jerk_cost": 23.59632230828998,
+        "candidate_lataccel_cost": 1.0828682212884346,
+        "candidate_total_cost": 77.73973337271171,
+        "delta": 0.0,
+        "segment": "19506"
+      },
+      {
+        "baseline_total_cost": 298.95952604095805,
+        "candidate_jerk_cost": 158.47097756890687,
+        "candidate_lataccel_cost": 2.809770969441024,
+        "candidate_total_cost": 298.95952604095805,
+        "delta": 0.0,
+        "segment": "19507"
+      },
+      {
+        "baseline_total_cost": 34.82148091044191,
+        "candidate_jerk_cost": 9.92659656631096,
+        "candidate_lataccel_cost": 0.4978976868826191,
+        "candidate_total_cost": 34.82148091044191,
+        "delta": 0.0,
+        "segment": "19508"
+      },
+      {
+        "baseline_total_cost": 28.52102681180665,
+        "candidate_jerk_cost": 10.76718411631703,
+        "candidate_lataccel_cost": 0.3550768539097924,
+        "candidate_total_cost": 28.52102681180665,
+        "delta": 0.0,
+        "segment": "19509"
+      }
+    ],
+    "top_regressions": [
+      {
+        "baseline_total_cost": 77.2466751419506,
+        "candidate_jerk_cost": 26.810192656176433,
+        "candidate_lataccel_cost": 1.0087296497154834,
+        "candidate_total_cost": 77.2466751419506,
+        "delta": 0.0,
+        "segment": "19500"
+      },
+      {
+        "baseline_total_cost": 144.4199764600868,
+        "candidate_jerk_cost": 44.622985240065724,
+        "candidate_lataccel_cost": 1.9959398244004212,
+        "candidate_total_cost": 144.4199764600868,
+        "delta": 0.0,
+        "segment": "19501"
+      },
+      {
+        "baseline_total_cost": 31.378015217714776,
+        "candidate_jerk_cost": 14.016977009075527,
+        "candidate_lataccel_cost": 0.347220764172785,
+        "candidate_total_cost": 31.378015217714776,
+        "delta": 0.0,
+        "segment": "19502"
+      },
+      {
+        "baseline_total_cost": 128.98419302141184,
+        "candidate_jerk_cost": 57.57904975725321,
+        "candidate_lataccel_cost": 1.4281028652831727,
+        "candidate_total_cost": 128.98419302141184,
+        "delta": 0.0,
+        "segment": "19503"
+      },
+      {
+        "baseline_total_cost": 29.417592849009853,
+        "candidate_jerk_cost": 8.135258995357866,
+        "candidate_lataccel_cost": 0.42564667707303977,
+        "candidate_total_cost": 29.417592849009853,
+        "delta": 0.0,
+        "segment": "19504"
+      },
+      {
+        "baseline_total_cost": 55.769324522483274,
+        "candidate_jerk_cost": 17.908586036881392,
+        "candidate_lataccel_cost": 0.7572147697120377,
+        "candidate_total_cost": 55.769324522483274,
+        "delta": 0.0,
+        "segment": "19505"
+      },
+      {
+        "baseline_total_cost": 77.73973337271171,
+        "candidate_jerk_cost": 23.59632230828998,
+        "candidate_lataccel_cost": 1.0828682212884346,
+        "candidate_total_cost": 77.73973337271171,
+        "delta": 0.0,
+        "segment": "19506"
+      },
+      {
+        "baseline_total_cost": 298.95952604095805,
+        "candidate_jerk_cost": 158.47097756890687,
+        "candidate_lataccel_cost": 2.809770969441024,
+        "candidate_total_cost": 298.95952604095805,
+        "delta": 0.0,
+        "segment": "19507"
+      },
+      {
+        "baseline_total_cost": 34.82148091044191,
+        "candidate_jerk_cost": 9.92659656631096,
+        "candidate_lataccel_cost": 0.4978976868826191,
+        "candidate_total_cost": 34.82148091044191,
+        "delta": 0.0,
+        "segment": "19508"
+      },
+      {
+        "baseline_total_cost": 28.52102681180665,
+        "candidate_jerk_cost": 10.76718411631703,
+        "candidate_lataccel_cost": 0.3550768539097924,
+        "candidate_total_cost": 28.52102681180665,
+        "delta": 0.0,
+        "segment": "19509"
+      }
+    ],
+    "top_worst_candidate": [
+      {
+        "baseline_total_cost": 659.8415442940322,
+        "candidate_jerk_cost": 158.93107352362813,
+        "candidate_lataccel_cost": 10.018209415408084,
+        "candidate_total_cost": 659.8415442940322,
+        "delta": 0.0,
+        "segment": "19521"
+      },
+      {
+        "baseline_total_cost": 298.95952604095805,
+        "candidate_jerk_cost": 158.47097756890687,
+        "candidate_lataccel_cost": 2.809770969441024,
+        "candidate_total_cost": 298.95952604095805,
+        "delta": 0.0,
+        "segment": "19507"
+      },
+      {
+        "baseline_total_cost": 144.4199764600868,
+        "candidate_jerk_cost": 44.622985240065724,
+        "candidate_lataccel_cost": 1.9959398244004212,
+        "candidate_total_cost": 144.4199764600868,
+        "delta": 0.0,
+        "segment": "19501"
+      },
+      {
+        "baseline_total_cost": 138.33583473666425,
+        "candidate_jerk_cost": 38.772400098570486,
+        "candidate_lataccel_cost": 1.9912686927618752,
+        "candidate_total_cost": 138.33583473666425,
+        "delta": 0.0,
+        "segment": "19576"
+      },
+      {
+        "baseline_total_cost": 128.98419302141184,
+        "candidate_jerk_cost": 57.57904975725321,
+        "candidate_lataccel_cost": 1.4281028652831727,
+        "candidate_total_cost": 128.98419302141184,
+        "delta": 0.0,
+        "segment": "19503"
+      },
+      {
+        "baseline_total_cost": 119.39823467018647,
+        "candidate_jerk_cost": 33.50615502032735,
+        "candidate_lataccel_cost": 1.7178415929971824,
+        "candidate_total_cost": 119.39823467018647,
+        "delta": 0.0,
+        "segment": "19516"
+      },
+      {
+        "baseline_total_cost": 103.12067044263537,
+        "candidate_jerk_cost": 40.40088879943694,
+        "candidate_lataccel_cost": 1.2543956328639687,
+        "candidate_total_cost": 103.12067044263537,
+        "delta": 0.0,
+        "segment": "19580"
+      },
+      {
+        "baseline_total_cost": 97.76316965873504,
+        "candidate_jerk_cost": 39.33758147122417,
+        "candidate_lataccel_cost": 1.1685117637502174,
+        "candidate_total_cost": 97.76316965873504,
+        "delta": 0.0,
+        "segment": "19551"
+      },
+      {
+        "baseline_total_cost": 97.45556688422303,
+        "candidate_jerk_cost": 38.74605689899762,
+        "candidate_lataccel_cost": 1.1741901997045083,
+        "candidate_total_cost": 97.45556688422303,
+        "delta": 0.0,
+        "segment": "19570"
+      },
+      {
+        "baseline_total_cost": 94.99522775169231,
+        "candidate_jerk_cost": 34.34913740665824,
+        "candidate_lataccel_cost": 1.2129218069006815,
+        "candidate_total_cost": 94.99522775169231,
+        "delta": 0.0,
+        "segment": "19540"
+      }
+    ],
+    "unchanged_segments": 100
+  },
+  "v11_diagnostics_vs_v8": {
+    "baseline": "checkpoints/general/v11-v8-holdout2.json",
+    "baseline_metrics": {
+      "mean": 61.32487947240764,
+      "median": 49.08119242915584,
+      "p90": 96.56834050215012,
+      "worst": 571.6435890531861
+    },
+    "candidate": "checkpoints/general/v11-candidate-holdout2.json",
+    "candidate_metrics": {
+      "mean": 59.890438052155005,
+      "median": 47.78733183039412,
+      "p90": 91.60586083843177,
+      "worst": 659.8415442940322
+    },
+    "improved_segments": 83,
+    "regressed_segments": 17,
+    "segments": 100,
+    "top_improvements": [
+      {
+        "baseline_total_cost": 156.6122824715683,
+        "candidate_jerk_cost": 38.772400098570486,
+        "candidate_lataccel_cost": 1.9912686927618752,
+        "candidate_total_cost": 138.33583473666425,
+        "delta": -18.276447734904053,
+        "segment": "19576"
+      },
+      {
+        "baseline_total_cost": 99.80948039308615,
+        "candidate_jerk_cost": 24.34590607795354,
+        "candidate_lataccel_cost": 1.154349982297877,
+        "candidate_total_cost": 82.0634051928474,
+        "delta": -17.74607520023875,
+        "segment": "19519"
+      },
+      {
+        "baseline_total_cost": 41.804728694684194,
+        "candidate_jerk_cost": 5.093816862857282,
+        "candidate_lataccel_cost": 0.4344685115809499,
+        "candidate_total_cost": 26.817242441904774,
+        "delta": -14.98748625277942,
+        "segment": "19556"
+      },
+      {
+        "baseline_total_cost": 87.38612028167533,
+        "candidate_jerk_cost": 23.2682297317919,
+        "candidate_lataccel_cost": 1.022543473892885,
+        "candidate_total_cost": 74.39540342643615,
+        "delta": -12.990716855239185,
+        "segment": "19586"
+      },
+      {
+        "baseline_total_cost": 96.40014485541587,
+        "candidate_jerk_cost": 33.20919531605171,
+        "candidate_lataccel_cost": 1.0297073669253036,
+        "candidate_total_cost": 84.6945636623169,
+        "delta": -11.705581193098979,
+        "segment": "19590"
+      },
+      {
+        "baseline_total_cost": 91.95168509736783,
+        "candidate_jerk_cost": 36.23866326692828,
+        "candidate_lataccel_cost": 0.9155774108947659,
+        "candidate_total_cost": 82.01753381166657,
+        "delta": -9.934151285701262,
+        "segment": "19582"
+      },
+      {
+        "baseline_total_cost": 44.57280378011551,
+        "candidate_jerk_cost": 9.545817590667186,
+        "candidate_lataccel_cost": 0.5071075721322629,
+        "candidate_total_cost": 34.90119619728033,
+        "delta": -9.671607582835179,
+        "segment": "19588"
+      },
+      {
+        "baseline_total_cost": 64.67692263487237,
+        "candidate_jerk_cost": 13.767914031295971,
+        "candidate_lataccel_cost": 0.8317246730877479,
+        "candidate_total_cost": 55.354147685683365,
+        "delta": -9.322774949189004,
+        "segment": "19553"
+      },
+      {
+        "baseline_total_cost": 94.51459708630217,
+        "candidate_jerk_cost": 32.648803616047616,
+        "candidate_lataccel_cost": 1.078424319544653,
+        "candidate_total_cost": 86.57001959328026,
+        "delta": -7.94457749302191,
+        "segment": "19581"
+      },
+      {
+        "baseline_total_cost": 58.07920019953154,
+        "candidate_jerk_cost": 16.45013071507602,
+        "candidate_lataccel_cost": 0.6937151705858742,
+        "candidate_total_cost": 51.13588924436973,
+        "delta": -6.943310955161813,
+        "segment": "19512"
+      }
+    ],
+    "top_regressions": [
+      {
+        "baseline_total_cost": 571.6435890531861,
+        "candidate_jerk_cost": 158.93107352362813,
+        "candidate_lataccel_cost": 10.018209415408084,
+        "candidate_total_cost": 659.8415442940322,
+        "delta": 88.19795524084611,
+        "segment": "19521"
+      },
+      {
+        "baseline_total_cost": 264.07175467972434,
+        "candidate_jerk_cost": 158.47097756890687,
+        "candidate_lataccel_cost": 2.809770969441024,
+        "candidate_total_cost": 298.95952604095805,
+        "delta": 34.88777136123372,
+        "segment": "19507"
+      },
+      {
+        "baseline_total_cost": 105.04211840344452,
+        "candidate_jerk_cost": 33.50615502032735,
+        "candidate_lataccel_cost": 1.7178415929971824,
+        "candidate_total_cost": 119.39823467018647,
+        "delta": 14.35611626674195,
+        "segment": "19516"
+      },
+      {
+        "baseline_total_cost": 69.90041294370198,
+        "candidate_jerk_cost": 26.810192656176433,
+        "candidate_lataccel_cost": 1.0087296497154834,
+        "candidate_total_cost": 77.2466751419506,
+        "delta": 7.346262198248624,
+        "segment": "19500"
+      },
+      {
+        "baseline_total_cost": 81.54229234117558,
+        "candidate_jerk_cost": 34.00428097588645,
+        "candidate_lataccel_cost": 1.0336236540567907,
+        "candidate_total_cost": 85.685463678726,
+        "delta": 4.143171337550413,
+        "segment": "19574"
+      },
+      {
+        "baseline_total_cost": 55.65680104446501,
+        "candidate_jerk_cost": 20.004067821084647,
+        "candidate_lataccel_cost": 0.7593429356345159,
+        "candidate_total_cost": 57.97121460281044,
+        "delta": 2.3144135583454286,
+        "segment": "19589"
+      },
+      {
+        "baseline_total_cost": 50.358773327158005,
+        "candidate_jerk_cost": 20.03999036595662,
+        "candidate_lataccel_cost": 0.6372053821334006,
+        "candidate_total_cost": 51.90025947262665,
+        "delta": 1.541486145468646,
+        "segment": "19594"
+      },
+      {
+        "baseline_total_cost": 37.63969402196751,
+        "candidate_jerk_cost": 14.10558595309326,
+        "candidate_lataccel_cost": 0.4945971210097386,
+        "candidate_total_cost": 38.83544200358019,
+        "delta": 1.1957479816126835,
+        "segment": "19578"
+      },
+      {
+        "baseline_total_cost": 30.524826321203957,
+        "candidate_jerk_cost": 14.016977009075527,
+        "candidate_lataccel_cost": 0.347220764172785,
+        "candidate_total_cost": 31.378015217714776,
+        "delta": 0.8531888965108188,
+        "segment": "19502"
+      },
+      {
+        "baseline_total_cost": 79.0307829729764,
+        "candidate_jerk_cost": 38.930459296007584,
+        "candidate_lataccel_cost": 0.8173147924438893,
+        "candidate_total_cost": 79.79619891820204,
+        "delta": 0.7654159452256408,
+        "segment": "19567"
+      }
+    ],
+    "top_worst_candidate": [
+      {
+        "baseline_total_cost": 571.6435890531861,
+        "candidate_jerk_cost": 158.93107352362813,
+        "candidate_lataccel_cost": 10.018209415408084,
+        "candidate_total_cost": 659.8415442940322,
+        "delta": 88.19795524084611,
+        "segment": "19521"
+      },
+      {
+        "baseline_total_cost": 264.07175467972434,
+        "candidate_jerk_cost": 158.47097756890687,
+        "candidate_lataccel_cost": 2.809770969441024,
+        "candidate_total_cost": 298.95952604095805,
+        "delta": 34.88777136123372,
+        "segment": "19507"
+      },
+      {
+        "baseline_total_cost": 150.16806540710613,
+        "candidate_jerk_cost": 44.622985240065724,
+        "candidate_lataccel_cost": 1.9959398244004212,
+        "candidate_total_cost": 144.4199764600868,
+        "delta": -5.74808894701934,
+        "segment": "19501"
+      },
+      {
+        "baseline_total_cost": 156.6122824715683,
+        "candidate_jerk_cost": 38.772400098570486,
+        "candidate_lataccel_cost": 1.9912686927618752,
+        "candidate_total_cost": 138.33583473666425,
+        "delta": -18.276447734904053,
+        "segment": "19576"
+      },
+      {
+        "baseline_total_cost": 130.31206395970506,
+        "candidate_jerk_cost": 57.57904975725321,
+        "candidate_lataccel_cost": 1.4281028652831727,
+        "candidate_total_cost": 128.98419302141184,
+        "delta": -1.3278709382932163,
+        "segment": "19503"
+      },
+      {
+        "baseline_total_cost": 105.04211840344452,
+        "candidate_jerk_cost": 33.50615502032735,
+        "candidate_lataccel_cost": 1.7178415929971824,
+        "candidate_total_cost": 119.39823467018647,
+        "delta": 14.35611626674195,
+        "segment": "19516"
+      },
+      {
+        "baseline_total_cost": 104.22490796149692,
+        "candidate_jerk_cost": 40.40088879943694,
+        "candidate_lataccel_cost": 1.2543956328639687,
+        "candidate_total_cost": 103.12067044263537,
+        "delta": -1.1042375188615523,
+        "segment": "19580"
+      },
+      {
+        "baseline_total_cost": 100.4544147388519,
+        "candidate_jerk_cost": 39.33758147122417,
+        "candidate_lataccel_cost": 1.1685117637502174,
+        "candidate_total_cost": 97.76316965873504,
+        "delta": -2.6912450801168575,
+        "segment": "19551"
+      },
+      {
+        "baseline_total_cost": 97.4588252025687,
+        "candidate_jerk_cost": 38.74605689899762,
+        "candidate_lataccel_cost": 1.1741901997045083,
+        "candidate_total_cost": 97.45556688422303,
+        "delta": -0.003258318345672251,
+        "segment": "19570"
+      },
+      {
+        "baseline_total_cost": 94.75692333361802,
+        "candidate_jerk_cost": 34.34913740665824,
+        "candidate_lataccel_cost": 1.2129218069006815,
+        "candidate_total_cost": 94.99522775169231,
+        "delta": 0.2383044180742928,
+        "segment": "19540"
+      }
+    ],
+    "unchanged_segments": 0
+  },
+  "v11_gate_holdout2": {
+    "baseline": "checkpoints/general/v11-v10-holdout2.json",
+    "baseline_metrics": {
+      "mean": 59.890438052155005,
+      "median": 47.78733183039412,
+      "worst": 659.8415442940322
+    },
+    "candidate": "checkpoints/general/v11-candidate-holdout2.json",
+    "candidate_metrics": {
+      "mean": 59.890438052155005,
+      "median": 47.78733183039412,
+      "worst": 659.8415442940322
+    },
+    "change_percent": {
+      "mean": 0.0,
+      "median": 0.0,
+      "worst": 0.0
+    },
+    "checks": {
+      "mean": true,
+      "median": true,
+      "regressed_segments": true,
+      "worst": true
+    },
+    "passed": true,
+    "regressed_segments": 0,
+    "segments": 100,
+    "tolerances": {
+      "max_regressed_segments": -1,
+      "mean_percent": 0.0,
+      "median_percent": 0.0,
+      "segment_epsilon": 1e-09,
+      "worst_percent": 0.0
+    },
+    "worst_regression": {
+      "delta": 0.0,
+      "segment": "19500"
+    }
+  },
+  "v11_selection_dev": {
+    "baseline": "checkpoints/general/v10-ci-selected-dev.json",
+    "baseline_metrics": {
+      "mean": 52.375180516017025,
+      "median": 47.84783258668075,
+      "p90": 75.7668816388386,
+      "worst": 217.70656207356691
+    },
+    "candidates": [
+      {
+        "change_percent": {
+          "mean": 5.391785045136858,
+          "median": 2.1286946801384756,
+          "p90": 5.009709201219003,
+          "worst": 13.551081576452923
+        },
+        "checks": {
+          "mean": false,
+          "median": false,
+          "p90": false,
+          "regressed_segments": true,
+          "worst": false
+        },
+        "config": "checkpoints/general/v11-configs/balanced.json",
+        "label": "balanced",
+        "metrics": {
+          "mean": 55.199137666443065,
+          "median": 48.86636685351499,
+          "p90": 79.5625820797762,
+          "worst": 247.20815589744709
+        },
+        "objective": 75.1646700290245,
+        "passed": false,
+        "regressed_segments": 67,
+        "result": "checkpoints/general/v11-dev/balanced.json"
+      },
+      {
+        "change_percent": {
+          "mean": 8.567129827966939,
+          "median": 9.373127655649393,
+          "p90": 14.810590448491748,
+          "worst": 5.798245914965506
+        },
+        "checks": {
+          "mean": false,
+          "median": false,
+          "p90": false,
+          "regressed_segments": true,
+          "worst": false
+        },
+        "config": "checkpoints/general/v11-configs/decay980.json",
+        "label": "decay980",
+        "metrics": {
+          "mean": 56.86223022845625,
+          "median": 52.33267101549175,
+          "p90": 86.98840417396048,
+          "worst": 230.32972391560935
+        },
+        "objective": 79.51565485459979,
+        "passed": false,
+        "regressed_segments": 72,
+        "result": "checkpoints/general/v11-dev/decay980.json"
+      },
+      {
+        "change_percent": {
+          "mean": 0.699740106205996,
+          "median": 0.24245368574644385,
+          "p90": 2.413470937069878,
+          "worst": 5.635342632033456
+        },
+        "checks": {
+          "mean": false,
+          "median": false,
+          "p90": false,
+          "regressed_segments": true,
+          "worst": false
+        },
+        "config": "checkpoints/general/v11-configs/decay995.json",
+        "label": "decay995",
+        "metrics": {
+          "mean": 52.741670659785385,
+          "median": 47.96384142033695,
+          "p90": 77.5954933071161,
+          "worst": 229.975072778833
+        },
+        "objective": 70.14925989992241,
+        "passed": false,
+        "regressed_segments": 34,
+        "result": "checkpoints/general/v11-dev/decay995.json"
+      },
+      {
+        "change_percent": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p90": 0.0,
+          "worst": 0.0
+        },
+        "checks": {
+          "mean": true,
+          "median": true,
+          "p90": true,
+          "regressed_segments": true,
+          "worst": true
+        },
+        "config": "checkpoints/general/v11-configs/default.json",
+        "label": "default",
+        "metrics": {
+          "mean": 52.375180516017025,
+          "median": 47.84783258668075,
+          "p90": 75.7668816388386,
+          "worst": 217.70656207356691
+        },
+        "objective": 68.09434400331415,
+        "passed": true,
+        "regressed_segments": 0,
+        "result": "checkpoints/general/v11-dev/default.json"
+      },
+      {
+        "change_percent": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p90": 0.0,
+          "worst": 0.0
+        },
+        "checks": {
+          "mean": true,
+          "median": true,
+          "p90": true,
+          "regressed_segments": true,
+          "worst": true
+        },
+        "config": "checkpoints/general/v11-configs/delta025.json",
+        "label": "delta025",
+        "metrics": {
+          "mean": 52.375180516017025,
+          "median": 47.84783258668075,
+          "p90": 75.7668816388386,
+          "worst": 217.70656207356691
+        },
+        "objective": 68.09434400331415,
+        "passed": true,
+        "regressed_segments": 0,
+        "result": "checkpoints/general/v11-dev/delta025.json"
+      },
+      {
+        "change_percent": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p90": 0.0,
+          "worst": 0.0
+        },
+        "checks": {
+          "mean": true,
+          "median": true,
+          "p90": true,
+          "regressed_segments": true,
+          "worst": true
+        },
+        "config": "checkpoints/general/v11-configs/delta050.json",
+        "label": "delta050",
+        "metrics": {
+          "mean": 52.375180516017025,
+          "median": 47.84783258668075,
+          "p90": 75.7668816388386,
+          "worst": 217.70656207356691
+        },
+        "objective": 68.09434400331415,
+        "passed": true,
+        "regressed_segments": 0,
+        "result": "checkpoints/general/v11-dev/delta050.json"
+      },
+      {
+        "change_percent": {
+          "mean": 0.0,
+          "median": 0.0,
+          "p90": 0.0,
+          "worst": 0.0
+        },
+        "checks": {
+          "mean": true,
+          "median": true,
+          "p90": true,
+          "regressed_segments": true,
+          "worst": true
+        },
+        "config": "checkpoints/general/v11-configs/delta100.json",
+        "label": "delta100",
+        "metrics": {
+          "mean": 52.375180516017025,
+          "median": 47.84783258668075,
+          "p90": 75.7668816388386,
+          "worst": 217.70656207356691
+        },
+        "objective": 68.09434400331415,
+        "passed": true,
+        "regressed_segments": 0,
+        "result": "checkpoints/general/v11-dev/delta100.json"
+      },
+      {
+        "change_percent": {
+          "mean": 9.03762448025158,
+          "median": 5.9967492953641575,
+          "p90": 11.768000244107768,
+          "worst": 4.28312554470038
+        },
+        "checks": {
+          "mean": false,
+          "median": false,
+          "p90": false,
+          "regressed_segments": true,
+          "worst": false
+        },
+        "config": "checkpoints/general/v11-configs/inverse040.json",
+        "label": "inverse040",
+        "metrics": {
+          "mean": 57.108652651908535,
+          "median": 50.71714715016955,
+          "p90": 84.68312845504997,
+          "worst": 227.03120744622885
+        },
+        "objective": 79.25355419692391,
+        "passed": false,
+        "regressed_segments": 84,
+        "result": "checkpoints/general/v11-dev/inverse040.json"
+      },
+      {
+        "change_percent": {
+          "mean": 5.5085897718375065,
+          "median": -3.51465009489452,
+          "p90": -0.9146672231819241,
+          "worst": 183.34824841888704
+        },
+        "checks": {
+          "mean": false,
+          "median": true,
+          "p90": true,
+          "regressed_segments": true,
+          "worst": false
+        },
+        "config": "checkpoints/general/v11-configs/inverse060.json",
+        "label": "inverse060",
+        "metrics": {
+          "mean": 55.26031435290377,
+          "median": 46.166148693268006,
+          "p90": 75.0738668064611,
+          "worst": 616.8677303284289
+        },
+        "objective": 84.32860709065537,
+        "passed": false,
+        "regressed_segments": 21,
+        "result": "checkpoints/general/v11-dev/inverse060.json"
+      },
+      {
+        "change_percent": {
+          "mean": 1.6376782739918705,
+          "median": 1.0190856070268688,
+          "p90": 2.3175848140275965,
+          "worst": 15.284269840815554
+        },
+        "checks": {
+          "mean": false,
+          "median": false,
+          "p90": false,
+          "regressed_segments": true,
+          "worst": false
+        },
+        "config": "checkpoints/general/v11-configs/preview080.json",
+        "label": "preview080",
+        "metrics": {
+          "mean": 53.23291746829186,
+          "median": 48.33544296184593,
+          "p90": 77.52284338176258,
+          "worst": 250.9814204820535
+        },
+        "objective": 71.14819333968303,
+        "passed": false,
+        "regressed_segments": 54,
+        "result": "checkpoints/general/v11-dev/preview080.json"
+      },
+      {
+        "change_percent": {
+          "mean": 0.44539316342828195,
+          "median": 1.354317223415319,
+          "p90": 0.9276218382756003,
+          "worst": 1.5313237818769305
+        },
+        "checks": {
+          "mean": false,
+          "median": false,
+          "p90": false,
+          "regressed_segments": true,
+          "worst": false
+        },
+        "config": "checkpoints/general/v11-configs/preview120.json",
+        "label": "preview120",
+        "metrics": {
+          "mean": 52.608455989368586,
+          "median": 48.4958440244331,
+          "p90": 76.46971177910089,
+          "worst": 221.0403544333061
+        },
+        "objective": 69.09419638824093,
+        "passed": false,
+        "regressed_segments": 55,
+        "result": "checkpoints/general/v11-dev/preview120.json"
+      },
+      {
+        "change_percent": {
+          "mean": 0.699740106205996,
+          "median": 0.24245368574644385,
+          "p90": 2.413470937069878,
+          "worst": 5.635342632033456
+        },
+        "checks": {
+          "mean": false,
+          "median": false,
+          "p90": false,
+          "regressed_segments": true,
+          "worst": false
+        },
+        "config": "checkpoints/general/v11-configs/smooth_decay.json",
+        "label": "smooth_decay",
+        "metrics": {
+          "mean": 52.741670659785385,
+          "median": 47.96384142033695,
+          "p90": 77.5954933071161,
+          "worst": 229.975072778833
+        },
+        "objective": 70.14925989992241,
+        "passed": false,
+        "regressed_segments": 34,
+        "result": "checkpoints/general/v11-dev/smooth_decay.json"
+      },
+      {
+        "change_percent": {
+          "mean": 9.03762448025158,
+          "median": 5.9967492953641575,
+          "p90": 11.768000244107768,
+          "worst": 4.28312554470038
+        },
+        "checks": {
+          "mean": false,
+          "median": false,
+          "p90": false,
+          "regressed_segments": true,
+          "worst": false
+        },
+        "config": "checkpoints/general/v11-configs/smooth_inverse.json",
+        "label": "smooth_inverse",
+        "metrics": {
+          "mean": 57.108652651908535,
+          "median": 50.71714715016955,
+          "p90": 84.68312845504997,
+          "worst": 227.03120744622885
+        },
+        "objective": 79.25355419692391,
+        "passed": false,
+        "regressed_segments": 84,
+        "result": "checkpoints/general/v11-dev/smooth_inverse.json"
+      }
+    ],
+    "passed": true,
+    "selected": {
+      "change_percent": {
+        "mean": 0.0,
+        "median": 0.0,
+        "p90": 0.0,
+        "worst": 0.0
+      },
+      "checks": {
+        "mean": true,
+        "median": true,
+        "p90": true,
+        "regressed_segments": true,
+        "worst": true
+      },
+      "config": "checkpoints/general/v11-configs/default.json",
+      "label": "default",
+      "metrics": {
+        "mean": 52.375180516017025,
+        "median": 47.84783258668075,
+        "p90": 75.7668816388386,
+        "worst": 217.70656207356691
+      },
+      "objective": 68.09434400331415,
+      "passed": true,
+      "regressed_segments": 0,
+      "result": "checkpoints/general/v11-dev/default.json"
+    },
+    "selected_config": {},
+    "selection_scope": "development-only-v11",
+    "weights": {
+      "p90": 0.15,
+      "regression": 1.0,
+      "worst": 0.02
+    }
+  },
+  "workflow_run_attempt": "1",
+  "workflow_run_id": "29707034492"
+}
