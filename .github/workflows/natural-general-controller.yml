@@ -12,9 +12,17 @@ on:
       - compute/package_closed_loop_residual.py
       - compute/compare_general_runs.py
       - compute/select_general_candidate.py
+      - compute/analyze_general_runs.py
       - checkpoints/general/models/v10-closed-loop-conservative.npz
       - checkpoints/general/models/v10-closed-loop-deploy.npz
       - .github/workflows/natural-general-controller.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: natural20-general-controller-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   unseen-100:
@@ -107,6 +115,25 @@ jobs:
             --baseline checkpoints/general/v10-ci-v8-test.json \
             --candidate checkpoints/general/v10-ci-candidate-test.json \
             --output checkpoints/general/v10-ci-gate-test.json
+      - name: Diagnose development and untouched results
+        if: always()
+        run: |
+          if [ -f checkpoints/general/v10-ci-selection-dev.json ] && [ -f checkpoints/general/v10-ci-selected-scale.txt ]; then
+            scale=$(cat checkpoints/general/v10-ci-selected-scale.txt)
+            label=${scale/./p}
+            if [ -f checkpoints/general/v10-scale-dev/v10-scale-${label}.json ]; then
+              python compute/analyze_general_runs.py \
+                --baseline checkpoints/general/v10-ci-v8-dev.json \
+                --candidate checkpoints/general/v10-scale-dev/v10-scale-${label}.json \
+                --output checkpoints/general/v10-ci-diagnostics-dev.json
+            fi
+          fi
+          if [ -f checkpoints/general/v10-ci-v8-test.json ] && [ -f checkpoints/general/v10-ci-candidate-test.json ]; then
+            python compute/analyze_general_runs.py \
+              --baseline checkpoints/general/v10-ci-v8-test.json \
+              --candidate checkpoints/general/v10-ci-candidate-test.json \
+              --output checkpoints/general/v10-ci-diagnostics-test.json
+          fi
       - name: Write permanent-readable run summary artifact
         if: always()
         run: |
@@ -116,16 +143,38 @@ jobs:
 
           paths = {
             "selection_dev": "checkpoints/general/v10-ci-selection-dev.json",
+            "diagnostics_dev": "checkpoints/general/v10-ci-diagnostics-dev.json",
             "gate_test": "checkpoints/general/v10-ci-gate-test.json",
+            "diagnostics_test": "checkpoints/general/v10-ci-diagnostics-test.json",
           }
-          payload = {"commit": "${{ github.sha }}"}
+          payload = {
+            "commit": "${{ github.sha }}",
+            "workflow_run_id": "${{ github.run_id }}",
+            "workflow_run_attempt": "${{ github.run_attempt }}",
+          }
+          scale = Path("checkpoints/general/v10-ci-selected-scale.txt")
+          payload["selected_scale"] = scale.read_text().strip() if scale.exists() else None
           for name, path in paths.items():
             file = Path(path)
             payload[name] = json.loads(file.read_text()) if file.exists() else None
-          Path("checkpoints/general/v10-ci-run-summary.json").write_text(
-            json.dumps(payload, indent=2, sort_keys=True) + "\n"
-          )
+          output = Path("checkpoints/general/v10-ci-run-summary.json")
+          output.parent.mkdir(parents=True, exist_ok=True)
+          output.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
           PY
+      - name: Publish latest durable summary to branch
+        if: always() && github.event_name == 'push'
+        run: |
+          mkdir -p results
+          cp checkpoints/general/v10-ci-run-summary.json results/latest-v10-summary.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add results/latest-v10-summary.json
+          if git diff --cached --quiet; then
+            echo "No summary change to publish"
+          else
+            git commit -m "Record latest V10 robustness summary [skip ci]"
+            git push
+          fi
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -139,6 +188,8 @@ jobs:
             checkpoints/general/v10-ci-v8-test.json
             checkpoints/general/v10-ci-candidate-test.json
             checkpoints/general/v10-ci-gate-test.json
+            checkpoints/general/v10-ci-diagnostics-dev.json
+            checkpoints/general/v10-ci-diagnostics-test.json
             checkpoints/general/v10-ci-run-summary.json
             official/models/riyadh_inverse_linear.npz
             official/models/riyadh_inverse_linear.json
