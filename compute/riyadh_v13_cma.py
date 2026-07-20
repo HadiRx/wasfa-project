@@ -25,7 +25,7 @@ class Residual:
     if not Path(path).exists(): return
     with np.load(path,allow_pickle=False) as a:
       self.mean=a["feature_mean"].astype(np.float32); self.scale=a["feature_scale"].astype(np.float32); self.weights=a["linear_weights"].astype(np.float32); self.bias=float(np.asarray(a["linear_bias"]).reshape(-1)[0]); self.limit=float(np.asarray(a["residual_limit"]).reshape(-1)[0]); self.output=float(np.asarray(a["output_scale"]).reshape(-1)[0]) if "output_scale" in a.files else 1.0
-      for n in ("kp","ki","kd","kpreview","inverse_scale","action_delta_limit"):
+      for n in ("kp","ki","kd","kpreview","inverse_scale","action_delta_limit","integral_decay","integral_limit"):
         k=f"controller_{n}"; self.params[n]=float(np.asarray(a[k]).reshape(-1)[0]) if k in a.files else None
     self.available=True
   def predict(self,x):
@@ -46,6 +46,6 @@ class Controller(BaseController):
     def p(name,default):
       v=self.policy.params.get(name) if self.policy.available else None
       return float(default if v is None else v)
-    self.kp=p("kp",.195); self.ki=p("ki",.100); self.kd=p("kd",-.053); self.kpreview=p("kpreview",.10); self.inverse_scale=p("inverse_scale",.50); self.action_delta=p("action_delta_limit",4.0)
+    self.kp=p("kp",.195); self.ki=p("ki",.100); self.kd=p("kd",-.053); self.kpreview=p("kpreview",.10); self.inverse_scale=p("inverse_scale",.50); self.action_delta=p("action_delta_limit",4.0); self.integral_decay=p("integral_decay",1.0); self.integral_limit=p("integral_limit",1000000.0)
   def update(self,target_lataccel,current_lataccel,state,future_plan):
-    e=float(target_lataccel-current_lataccel); self.integral+=e; f=policy_features(target_lataccel,current_lataccel,state,future_plan,self.integral,self.prev_error,self.prev_action); d=e-self.prev_error; base=self.kp*e+self.ki*self.integral+self.kd*d+self.kpreview*float(f[11]); inv=np.clip(self.inverse.predict(inverse_features(target_lataccel,state,future_plan)),-1,1); req=base+self.inverse_scale*inv+self.policy.predict(f); action=float(np.clip(req,self.prev_action-self.action_delta,self.prev_action+self.action_delta)); action=float(np.clip(action,-STEER_LIMIT,STEER_LIMIT)); self.prev_error=e; self.prev_action=action; return action
+    e=float(target_lataccel-current_lataccel); self.integral=float(np.clip(self.integral_decay*self.integral+e,-self.integral_limit,self.integral_limit)); f=policy_features(target_lataccel,current_lataccel,state,future_plan,self.integral,self.prev_error,self.prev_action); d=e-self.prev_error; base=self.kp*e+self.ki*self.integral+self.kd*d+self.kpreview*float(f[11]); inv=np.clip(self.inverse.predict(inverse_features(target_lataccel,state,future_plan)),-1,1); req=base+self.inverse_scale*inv+self.policy.predict(f); action=float(np.clip(req,self.prev_action-self.action_delta,self.prev_action+self.action_delta)); action=float(np.clip(action,-STEER_LIMIT,STEER_LIMIT)); self.prev_error=e; self.prev_action=action; return action
