@@ -1,0 +1,152 @@
+name: Natural-20 V13-C Hard Guard Refinement
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [controls-challenge-compute]
+    paths:
+      - compute/riyadh_v13_cma.py
+      - compute/optimize_v13c_cma.py
+      - .github/workflows/v13c-hard-guard-refinement.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: natural20-v13c-hard-guard-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  v13c-hard-guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - name: Checkout official challenge
+        run: git clone --depth 1 https://github.com/commaai/controls_challenge.git official
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - name: Install runtime
+        run: python -m pip install --upgrade pip pandas numpy onnxruntime matplotlib seaborn tqdm cmaes
+      - name: Download official dataset
+        working-directory: official
+        run: python -c "from tinyphysics import download_dataset; download_dataset()"
+
+      - name: Validate V13-C splits and guards
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          ranges={'inverse_train':(0,5000),'inverse_validation':(10000,500),'v10_selection':(16500,100),'v13a_search':(13500,48),'v13c_search':(16000,96),'v13c_development':(16100,200),'v13c_holdout':(16300,200)}
+          guards=[15692,15338,15377,15273,15297,15029,15199,15166]
+          missing=[]
+          for name,(start,count) in ranges.items():
+            absent=[str(Path('official/data')/f'{i:05d}.csv') for i in range(start,start+count) if not (Path('official/data')/f'{i:05d}.csv').exists()]
+            print(name,start,count,len(absent)); missing+=absent[:10]
+          for i in guards:
+            p=Path('official/data')/f'{i:05d}.csv'
+            if not p.exists(): missing.append(str(p))
+          if missing: raise SystemExit('Missing files: '+', '.join(missing))
+          PY
+
+      - name: Train inverse model
+        run: python -u compute/train_warmup_inverse.py --data-dir official/data --train-start 0 --train-count 5000 --validation-start 10000 --validation-count 500 --output official/models/riyadh_inverse_linear.npz
+
+      - name: Run tests
+        run: python -m unittest discover -s tests -v
+
+      - name: Reproduce frozen V10
+        run: |
+          mkdir -p checkpoints/general/v10-scale-models checkpoints/general/v10-scale-dev checkpoints/general/models
+          python -u compute/evaluate_general_policy.py --official-dir official --controller-source compute/riyadh_v13_cma.py --disable-model --quiet --unseen-start 16500 --unseen-count 100 --output checkpoints/general/v10-v8-dev.json
+          for scale in 0.25 0.40 0.55 0.70 0.80 1.00; do
+            label=${scale/./p}
+            python compute/package_closed_loop_residual.py --source checkpoints/general/models/v10-closed-loop-conservative.npz --output checkpoints/general/v10-scale-models/v10-scale-${label}.npz --output-scale ${scale}
+            python -u compute/evaluate_general_policy.py --official-dir official --controller-source compute/riyadh_v13_cma.py --model checkpoints/general/v10-scale-models/v10-scale-${label}.npz --unseen-start 16500 --unseen-count 100 --quiet --output checkpoints/general/v10-scale-dev/v10-scale-${label}.json
+          done
+          python compute/select_general_candidate.py --baseline checkpoints/general/v10-v8-dev.json --candidate 0.25=checkpoints/general/v10-scale-dev/v10-scale-0p25.json=checkpoints/general/v10-scale-models/v10-scale-0p25.npz --candidate 0.40=checkpoints/general/v10-scale-dev/v10-scale-0p40.json=checkpoints/general/v10-scale-models/v10-scale-0p40.npz --candidate 0.55=checkpoints/general/v10-scale-dev/v10-scale-0p55.json=checkpoints/general/v10-scale-models/v10-scale-0p55.npz --candidate 0.70=checkpoints/general/v10-scale-dev/v10-scale-0p70.json=checkpoints/general/v10-scale-models/v10-scale-0p70.npz --candidate 0.80=checkpoints/general/v10-scale-dev/v10-scale-0p80.json=checkpoints/general/v10-scale-models/v10-scale-0p80.npz --candidate 1.00=checkpoints/general/v10-scale-dev/v10-scale-1p00.json=checkpoints/general/v10-scale-models/v10-scale-1p00.npz --output-model checkpoints/general/models/v10-selected.npz --output-scale checkpoints/general/v10-selected-scale.txt --output-report checkpoints/general/v10-selection.json
+
+      - name: Reproduce frozen V13-A
+        run: python -u compute/optimize_v13_cma.py --official-dir official --controller-source compute/riyadh_v13_cma.py --inverse-model official/models/riyadh_inverse_linear.npz --baseline-model checkpoints/general/models/v10-selected.npz --start 13500 --count 48 --batch 12 --population 10 --generations 12 --finalists 5 --sigma 0.65 --seed 20260720 --output-model checkpoints/general/models/v13a-frozen.npz --output-report checkpoints/general/v13a-reproduction.json
+
+      - name: Run hard-case guarded V13-C search
+        run: |
+          python -u compute/optimize_v13c_cma.py \
+            --official-dir official \
+            --controller-source compute/riyadh_v13_cma.py \
+            --inverse-model official/models/riyadh_inverse_linear.npz \
+            --baseline-model checkpoints/general/models/v13a-frozen.npz \
+            --start 16000 --count 96 --batch 16 \
+            --population 12 --generations 16 --finalists 6 \
+            --sigma 0.16 --seed 20260722 \
+            --guard-segments 15692,15338,15377,15273,15297,15029,15199,15166 \
+            --output-model checkpoints/general/models/v13c-candidate.npz \
+            --output-report checkpoints/general/v13c-search.json
+
+      - name: Development gate on 200 fresh segments
+        run: |
+          python -u compute/evaluate_general_policy.py --official-dir official --controller-source compute/riyadh_v13_cma.py --model checkpoints/general/models/v13a-frozen.npz --unseen-start 16100 --unseen-count 200 --quiet --output checkpoints/general/v13a-development-200.json
+          python -u compute/evaluate_general_policy.py --official-dir official --controller-source compute/riyadh_v13_cma.py --model checkpoints/general/models/v13c-candidate.npz --unseen-start 16100 --unseen-count 200 --quiet --output checkpoints/general/v13c-development-200.json
+          python compute/compare_general_runs.py --baseline checkpoints/general/v13a-development-200.json --candidate checkpoints/general/v13c-development-200.json --output checkpoints/general/v13c-gate-development.json || true
+          python - <<'PY'
+          import json,shutil
+          from pathlib import Path
+          gate=json.loads(Path('checkpoints/general/v13c-gate-development.json').read_text())
+          search=json.loads(Path('checkpoints/general/v13c-search.json').read_text())
+          hard_ok=search['selected']['guard_regressed']==0 and search['selected']['guard_worst_delta']<=1e-9
+          passed=bool(gate.get('passed')) and hard_ok
+          shutil.copy2('checkpoints/general/models/v13c-candidate.npz' if passed else 'checkpoints/general/models/v13a-frozen.npz','checkpoints/general/models/v13c-selected.npz')
+          Path('checkpoints/general/v13c-selected-label.txt').write_text('v13c-hard-guard\n' if passed else 'v13a-fallback\n')
+          print({'development_passed':gate.get('passed'),'hard_guard_passed':hard_ok,'selected':'v13c-hard-guard' if passed else 'v13a-fallback'})
+          PY
+
+      - name: Frozen holdout on 200 new segments
+        run: |
+          python -u compute/evaluate_general_policy.py --official-dir official --controller-source compute/riyadh_v13_cma.py --model checkpoints/general/models/v13a-frozen.npz --unseen-start 16300 --unseen-count 200 --quiet --output checkpoints/general/v13a-holdout-200.json
+          python -u compute/evaluate_general_policy.py --official-dir official --controller-source compute/riyadh_v13_cma.py --model checkpoints/general/models/v13c-selected.npz --unseen-start 16300 --unseen-count 200 --quiet --output checkpoints/general/v13c-selected-holdout-200.json
+          python compute/compare_general_runs.py --baseline checkpoints/general/v13a-holdout-200.json --candidate checkpoints/general/v13c-selected-holdout-200.json --output checkpoints/general/v13c-gate-holdout.json || true
+          python compute/analyze_general_runs.py --baseline checkpoints/general/v13a-holdout-200.json --candidate checkpoints/general/v13c-selected-holdout-200.json --output checkpoints/general/v13c-holdout-diagnostics.json
+
+      - name: Write durable V13-C summary
+        if: always()
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          files={'v10_selection':'checkpoints/general/v10-selection.json','v13a_reproduction':'checkpoints/general/v13a-reproduction.json','v13c_search':'checkpoints/general/v13c-search.json','development_gate':'checkpoints/general/v13c-gate-development.json','holdout_gate':'checkpoints/general/v13c-gate-holdout.json','holdout_diagnostics':'checkpoints/general/v13c-holdout-diagnostics.json'}
+          payload={'commit':'${{ github.sha }}','workflow_run_id':'${{ github.run_id }}','scope':'v13c-hard-case-guarded-refinement','selected_label':Path('checkpoints/general/v13c-selected-label.txt').read_text().strip() if Path('checkpoints/general/v13c-selected-label.txt').exists() else None,'ranges':{'search':[16000,16095],'development':[16100,16299],'holdout':[16300,16499]},'guard_segments':[15692,15338,15377,15273,15297,15029,15199,15166]}
+          for key,path in files.items(): payload[key]=json.loads(Path(path).read_text()) if Path(path).exists() else None
+          out=Path('checkpoints/general/v13c-summary.json'); out.parent.mkdir(parents=True,exist_ok=True); out.write_text(json.dumps(payload,indent=2,sort_keys=True)+'\n')
+          PY
+
+      - name: Publish latest V13-C summary
+        if: always() && github.event_name == 'push'
+        run: |
+          cp checkpoints/general/v13c-summary.json /tmp/latest-v13c-summary.json
+          git fetch origin controls-challenge-compute
+          git checkout -B controls-challenge-compute origin/controls-challenge-compute
+          mkdir -p results
+          cp /tmp/latest-v13c-summary.json results/latest-v13c-summary.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions-bot@users.noreply.github.com"
+          git add results/latest-v13c-summary.json
+          if git diff --cached --quiet; then echo "No V13-C summary change"; else git commit -m "Record latest V13-C guarded refinement [skip ci]"; git push origin HEAD:controls-challenge-compute; fi
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: natural20-v13c-hard-guard-refinement
+          path: |
+            checkpoints/general/models/v13a-frozen.npz
+            checkpoints/general/models/v13c-candidate.npz
+            checkpoints/general/models/v13c-selected.npz
+            checkpoints/general/v13c-selected-label.txt
+            checkpoints/general/v13c-search.json
+            checkpoints/general/v13c-gate-development.json
+            checkpoints/general/v13c-gate-holdout.json
+            checkpoints/general/v13c-holdout-diagnostics.json
+            checkpoints/general/v13c-summary.json
+            official/models/riyadh_inverse_linear.npz
+            official/models/riyadh_inverse_linear.json
+          if-no-files-found: warn
