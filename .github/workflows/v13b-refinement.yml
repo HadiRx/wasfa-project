@@ -1,0 +1,142 @@
+name: Natural-20 V13-B Fine Refinement
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [controls-challenge-compute]
+    paths:
+      - compute/riyadh_v13_cma.py
+      - compute/optimize_v13b_cma.py
+      - .github/workflows/v13b-refinement.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: natural20-v13b-refinement-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  v13b-refinement:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - name: Checkout official challenge
+        run: git clone --depth 1 https://github.com/commaai/controls_challenge.git official
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - name: Install runtime
+        run: python -m pip install --upgrade pip pandas numpy onnxruntime matplotlib seaborn tqdm cmaes
+      - name: Download official dataset
+        working-directory: official
+        run: python -c "from tinyphysics import download_dataset; download_dataset()"
+
+      - name: Validate V13-B splits
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          ranges={
+            'inverse_train':(0,5000),'inverse_validation':(10000,500),
+            'v10_selection':(16500,100),'v13a_search':(13500,48),
+            'v13b_search':(15500,96),'v13b_development':(15600,200),
+            'v13b_holdout':(15800,200),
+          }
+          missing=[]
+          for name,(start,count) in ranges.items():
+            absent=[str(Path('official/data')/f'{i:05d}.csv') for i in range(start,start+count) if not (Path('official/data')/f'{i:05d}.csv').exists()]
+            print(name,start,count,len(absent)); missing+=absent[:10]
+          if missing: raise SystemExit('Missing files: '+', '.join(missing))
+          PY
+
+      - name: Train inverse model
+        run: |
+          python -u compute/train_warmup_inverse.py --data-dir official/data --train-start 0 --train-count 5000 --validation-start 10000 --validation-count 500 --output official/models/riyadh_inverse_linear.npz
+
+      - name: Run tests
+        run: python -m unittest discover -s tests -v
+
+      - name: Reproduce frozen V10
+        run: |
+          mkdir -p checkpoints/general/v10-scale-models checkpoints/general/v10-scale-dev checkpoints/general/models
+          python -u compute/evaluate_general_policy.py --official-dir official --controller-source compute/riyadh_v13_cma.py --disable-model --quiet --unseen-start 16500 --unseen-count 100 --output checkpoints/general/v10-v8-dev.json
+          for scale in 0.25 0.40 0.55 0.70 0.80 1.00; do
+            label=${scale/./p}
+            python compute/package_closed_loop_residual.py --source checkpoints/general/models/v10-closed-loop-conservative.npz --output checkpoints/general/v10-scale-models/v10-scale-${label}.npz --output-scale ${scale}
+            python -u compute/evaluate_general_policy.py --official-dir official --controller-source compute/riyadh_v13_cma.py --model checkpoints/general/v10-scale-models/v10-scale-${label}.npz --unseen-start 16500 --unseen-count 100 --quiet --output checkpoints/general/v10-scale-dev/v10-scale-${label}.json
+          done
+          python compute/select_general_candidate.py --baseline checkpoints/general/v10-v8-dev.json --candidate 0.25=checkpoints/general/v10-scale-dev/v10-scale-0p25.json=checkpoints/general/v10-scale-models/v10-scale-0p25.npz --candidate 0.40=checkpoints/general/v10-scale-dev/v10-scale-0p40.json=checkpoints/general/v10-scale-models/v10-scale-0p40.npz --candidate 0.55=checkpoints/general/v10-scale-dev/v10-scale-0p55.json=checkpoints/general/v10-scale-models/v10-scale-0p55.npz --candidate 0.70=checkpoints/general/v10-scale-dev/v10-scale-0p70.json=checkpoints/general/v10-scale-models/v10-scale-0p70.npz --candidate 0.80=checkpoints/general/v10-scale-dev/v10-scale-0p80.json=checkpoints/general/v10-scale-models/v10-scale-0p80.npz --candidate 1.00=checkpoints/general/v10-scale-dev/v10-scale-1p00.json=checkpoints/general/v10-scale-models/v10-scale-1p00.npz --output-model checkpoints/general/models/v10-selected.npz --output-scale checkpoints/general/v10-selected-scale.txt --output-report checkpoints/general/v10-selection.json
+
+      - name: Reproduce frozen V13-A
+        run: |
+          python -u compute/optimize_v13_cma.py --official-dir official --controller-source compute/riyadh_v13_cma.py --inverse-model official/models/riyadh_inverse_linear.npz --baseline-model checkpoints/general/models/v10-selected.npz --start 13500 --count 48 --batch 12 --population 10 --generations 12 --finalists 5 --sigma 0.65 --seed 20260720 --output-model checkpoints/general/models/v13a-frozen.npz --output-report checkpoints/general/v13a-reproduction.json
+
+      - name: Run V13-B fine refinement
+        run: |
+          python -u compute/optimize_v13b_cma.py --official-dir official --controller-source compute/riyadh_v13_cma.py --inverse-model official/models/riyadh_inverse_linear.npz --baseline-model checkpoints/general/models/v13a-frozen.npz --start 15500 --count 96 --batch 16 --population 14 --generations 20 --finalists 6 --sigma 0.22 --seed 20260721 --output-model checkpoints/general/models/v13b-candidate.npz --output-report checkpoints/general/v13b-search.json
+
+      - name: Development gate on 200 fresh segments
+        run: |
+          python -u compute/evaluate_general_policy.py --official-dir official --controller-source compute/riyadh_v13_cma.py --model checkpoints/general/models/v13a-frozen.npz --unseen-start 15600 --unseen-count 200 --quiet --output checkpoints/general/v13a-development-200.json
+          python -u compute/evaluate_general_policy.py --official-dir official --controller-source compute/riyadh_v13_cma.py --model checkpoints/general/models/v13b-candidate.npz --unseen-start 15600 --unseen-count 200 --quiet --output checkpoints/general/v13b-development-200.json
+          python compute/compare_general_runs.py --baseline checkpoints/general/v13a-development-200.json --candidate checkpoints/general/v13b-development-200.json --output checkpoints/general/v13b-gate-development.json || true
+          python - <<'PY'
+          import json,shutil
+          from pathlib import Path
+          passed=bool(json.loads(Path('checkpoints/general/v13b-gate-development.json').read_text()).get('passed'))
+          shutil.copy2('checkpoints/general/models/v13b-candidate.npz' if passed else 'checkpoints/general/models/v13a-frozen.npz','checkpoints/general/models/v13b-selected.npz')
+          Path('checkpoints/general/v13b-selected-label.txt').write_text('v13b-cma\n' if passed else 'v13a-fallback\n')
+          print({'selected':'v13b-cma' if passed else 'v13a-fallback'})
+          PY
+
+      - name: Frozen holdout on 200 new segments
+        run: |
+          python -u compute/evaluate_general_policy.py --official-dir official --controller-source compute/riyadh_v13_cma.py --model checkpoints/general/models/v13a-frozen.npz --unseen-start 15800 --unseen-count 200 --quiet --output checkpoints/general/v13a-holdout-200.json
+          python -u compute/evaluate_general_policy.py --official-dir official --controller-source compute/riyadh_v13_cma.py --model checkpoints/general/models/v13b-selected.npz --unseen-start 15800 --unseen-count 200 --quiet --output checkpoints/general/v13b-selected-holdout-200.json
+          python compute/compare_general_runs.py --baseline checkpoints/general/v13a-holdout-200.json --candidate checkpoints/general/v13b-selected-holdout-200.json --output checkpoints/general/v13b-gate-holdout.json || true
+          python compute/analyze_general_runs.py --baseline checkpoints/general/v13a-holdout-200.json --candidate checkpoints/general/v13b-selected-holdout-200.json --output checkpoints/general/v13b-holdout-diagnostics.json
+
+      - name: Write durable V13-B summary
+        if: always()
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          files={'v10_selection':'checkpoints/general/v10-selection.json','v13a_reproduction':'checkpoints/general/v13a-reproduction.json','v13b_search':'checkpoints/general/v13b-search.json','development_gate':'checkpoints/general/v13b-gate-development.json','holdout_gate':'checkpoints/general/v13b-gate-holdout.json','holdout_diagnostics':'checkpoints/general/v13b-holdout-diagnostics.json'}
+          payload={'commit':'${{ github.sha }}','workflow_run_id':'${{ github.run_id }}','scope':'v13b-fine-refinement','selected_label':Path('checkpoints/general/v13b-selected-label.txt').read_text().strip() if Path('checkpoints/general/v13b-selected-label.txt').exists() else None,'ranges':{'search':[15500,15595],'development':[15600,15799],'holdout':[15800,15999]}}
+          for key,path in files.items(): payload[key]=json.loads(Path(path).read_text()) if Path(path).exists() else None
+          out=Path('checkpoints/general/v13b-summary.json');out.parent.mkdir(parents=True,exist_ok=True);out.write_text(json.dumps(payload,indent=2,sort_keys=True)+'\n')
+          PY
+
+      - name: Publish latest V13-B summary
+        if: always() && github.event_name == 'push'
+        run: |
+          cp checkpoints/general/v13b-summary.json /tmp/latest-v13b-summary.json
+          git fetch origin controls-challenge-compute
+          git checkout -B controls-challenge-compute origin/controls-challenge-compute
+          mkdir -p results
+          cp /tmp/latest-v13b-summary.json results/latest-v13b-summary.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions-bot@users.noreply.github.com"
+          git add results/latest-v13b-summary.json
+          if git diff --cached --quiet; then echo "No V13-B summary change"; else git commit -m "Record latest V13-B refinement [skip ci]"; git push origin HEAD:controls-challenge-compute; fi
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: natural20-v13b-fine-refinement
+          path: |
+            checkpoints/general/models/v13a-frozen.npz
+            checkpoints/general/models/v13b-candidate.npz
+            checkpoints/general/models/v13b-selected.npz
+            checkpoints/general/v13b-selected-label.txt
+            checkpoints/general/v13b-search.json
+            checkpoints/general/v13b-gate-development.json
+            checkpoints/general/v13b-gate-holdout.json
+            checkpoints/general/v13b-holdout-diagnostics.json
+            checkpoints/general/v13b-summary.json
+            official/models/riyadh_inverse_linear.npz
+            official/models/riyadh_inverse_linear.json
+          if-no-files-found: warn
