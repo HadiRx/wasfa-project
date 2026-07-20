@@ -64,7 +64,7 @@ jobs:
           python compute/select_general_candidate.py --baseline checkpoints/general/v10-v8-dev.json --candidate 0.25=checkpoints/general/v10-scale-dev/v10-scale-0p25.json=checkpoints/general/v10-scale-models/v10-scale-0p25.npz --candidate 0.40=checkpoints/general/v10-scale-dev/v10-scale-0p40.json=checkpoints/general/v10-scale-models/v10-scale-0p40.npz --candidate 0.55=checkpoints/general/v10-scale-dev/v10-scale-0p55.json=checkpoints/general/v10-scale-models/v10-scale-0p55.npz --candidate 0.70=checkpoints/general/v10-scale-dev/v10-scale-0p70.json=checkpoints/general/v10-scale-models/v10-scale-0p70.npz --candidate 0.80=checkpoints/general/v10-scale-dev/v10-scale-0p80.json=checkpoints/general/v10-scale-models/v10-scale-0p80.npz --candidate 1.00=checkpoints/general/v10-scale-dev/v10-scale-1p00.json=checkpoints/general/v10-scale-models/v10-scale-1p00.npz --output-model checkpoints/general/models/v10-selected.npz --output-scale checkpoints/general/v10-selected-scale.txt --output-report checkpoints/general/v10-selection.json
       - name: Run V13-A CMA-ES search
         run: |
-          python -u compute/optimize_v13_cma.py --official-dir official --controller-source compute/riyadh_v13_cma.py --inverse-model official/models/riyadh_inverse_linear.npz --baseline-model checkpoints/general/models/v10-selected.npz --search-start 13500 --count 48 --batch 12 --population 10 --generations 12 --finalists 5 --output-model checkpoints/general/models/v13-cma.npz --output-report checkpoints/general/v13-cma-search.json
+          python -u compute/optimize_v13_cma.py --official-dir official --controller-source compute/riyadh_v13_cma.py --inverse-model official/models/riyadh_inverse_linear.npz --baseline-model checkpoints/general/models/v10-selected.npz --start 13500 --count 48 --batch 12 --population 10 --generations 12 --finalists 5 --output-model checkpoints/general/models/v13-cma.npz --output-report checkpoints/general/v13-cma-search.json
       - name: Evaluate V10 and V13 on development
         run: |
           python -u compute/evaluate_general_policy.py --official-dir official --controller-source compute/riyadh_v13_cma.py --model checkpoints/general/models/v10-selected.npz --unseen-start 14000 --unseen-count 100 --quiet --output checkpoints/general/v13-v10-dev.json
@@ -94,12 +94,20 @@ jobs:
           for k,v in files.items(): p[k]=json.loads(Path(v).read_text()) if Path(v).exists() else None
           Path('checkpoints/general/v13-run-summary.json').write_text(json.dumps(p,indent=2,sort_keys=True)+'\n')
           PY
+          cp checkpoints/general/v13-run-summary.json /tmp/latest-v13-summary.json
+          git fetch origin controls-challenge-compute
+          git checkout -B controls-challenge-compute origin/controls-challenge-compute
           mkdir -p results
-          cp checkpoints/general/v13-run-summary.json results/latest-v13-summary.json
+          cp /tmp/latest-v13-summary.json results/latest-v13-summary.json
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions-bot@users.noreply.github.com"
           git add results/latest-v13-summary.json
-          git diff --cached --quiet || (git commit -m "Record latest V13 CMA summary [skip ci]" && git push)
+          if git diff --cached --quiet; then
+            echo "No V13 summary change"
+          else
+            git commit -m "Record latest V13 CMA summary [skip ci]"
+            git push origin HEAD:controls-challenge-compute
+          fi
       - uses: actions/upload-artifact@v4
         if: always()
         with:
