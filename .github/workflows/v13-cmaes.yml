@@ -1,0 +1,223 @@
+name: Natural-20 V13 CMA-ES Direct Policy Search
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [controls-challenge-compute]
+    paths:
+      - compute/riyadh_general.py
+      - compute/optimize_v13_cmaes.py
+      - compute/evaluate_general_policy.py
+      - compute/train_warmup_inverse.py
+      - compute/package_closed_loop_residual.py
+      - compute/compare_general_runs.py
+      - compute/analyze_general_runs.py
+      - checkpoints/general/models/v10-closed-loop-conservative.npz
+      - .github/workflows/v13-cmaes.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: natural20-v13-cmaes-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  v13-cmaes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+      - name: Checkout official challenge
+        run: git clone --depth 1 https://github.com/commaai/controls_challenge.git official
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - name: Install runtime
+        run: python -m pip install --upgrade pip pandas numpy onnxruntime matplotlib seaborn tqdm cmaes
+      - name: Download official dataset
+        working-directory: official
+        run: python -c "from tinyphysics import download_dataset; download_dataset()"
+
+      - name: Validate V13 split files
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          ranges = {
+            'inverse_train': (0, 5000),
+            'inverse_validation': (10000, 500),
+            'v13_search_pool': (13200, 120),
+            'v13_monitor': (13400, 40),
+            'v13_development': (13500, 100),
+            'v13_holdout': (14000, 100),
+          }
+          root = Path('official/data')
+          missing = []
+          for name, (start, count) in ranges.items():
+            absent = [root / f'{idx:05d}.csv' for idx in range(start, start + count) if not (root / f'{idx:05d}.csv').exists()]
+            print(f'{name}: start={start} count={count} missing={len(absent)}')
+            missing.extend(str(path) for path in absent[:10])
+          if missing:
+            raise SystemExit('Missing selected dataset files: ' + ', '.join(missing))
+          PY
+
+      - name: Train reproducible inverse model
+        run: |
+          python -u compute/train_warmup_inverse.py \
+            --data-dir official/data \
+            --train-start 0 --train-count 5000 \
+            --validation-start 10000 --validation-count 500 \
+            --output official/models/riyadh_inverse_linear.npz
+
+      - name: Run controller tests
+        run: python -m unittest discover -s tests -v
+
+      - name: Freeze proven V10 baseline
+        run: |
+          mkdir -p checkpoints/general/models
+          python compute/package_closed_loop_residual.py \
+            --source checkpoints/general/models/v10-closed-loop-conservative.npz \
+            --output checkpoints/general/models/v10-frozen-scale1.npz \
+            --output-scale 1.0
+
+      - name: Run V13 low-dimensional CMA-ES search
+        run: |
+          python -u compute/optimize_v13_cmaes.py \
+            --official-dir official \
+            --controller-source compute/riyadh_general.py \
+            --base-model checkpoints/general/models/v10-frozen-scale1.npz \
+            --inverse-model official/models/riyadh_inverse_linear.npz \
+            --search-start 13200 --search-count 120 \
+            --monitor-start 13400 --monitor-count 40 \
+            --subset-count 24 \
+            --population-size 10 \
+            --generations 10 \
+            --sigma 0.35 \
+            --regression-weight 0.60 \
+            --worst-weight 0.20 \
+            --output-model checkpoints/general/models/v13-cmaes.npz \
+            --output-report checkpoints/general/v13-cmaes-search.json
+
+      - name: Evaluate V10 and V13 on fixed development gate
+        run: |
+          python -u compute/evaluate_general_policy.py \
+            --official-dir official \
+            --controller-source compute/riyadh_general.py \
+            --model checkpoints/general/models/v10-frozen-scale1.npz \
+            --unseen-start 13500 --unseen-count 100 --quiet \
+            --output checkpoints/general/v13-v10-development.json
+          python -u compute/evaluate_general_policy.py \
+            --official-dir official \
+            --controller-source compute/riyadh_general.py \
+            --model checkpoints/general/models/v13-cmaes.npz \
+            --unseen-start 13500 --unseen-count 100 --quiet \
+            --output checkpoints/general/v13-candidate-development.json
+
+      - name: Gate and freeze V13
+        run: |
+          python compute/compare_general_runs.py \
+            --baseline checkpoints/general/v13-v10-development.json \
+            --candidate checkpoints/general/v13-candidate-development.json \
+            --output checkpoints/general/v13-gate-development.json || true
+          python - <<'PY'
+          import json, shutil
+          from pathlib import Path
+          report = json.loads(Path('checkpoints/general/v13-gate-development.json').read_text())
+          passed = bool(report.get('passed'))
+          source = Path('checkpoints/general/models/v13-cmaes.npz' if passed else 'checkpoints/general/models/v10-frozen-scale1.npz')
+          target = Path('checkpoints/general/models/v13-selected.npz')
+          shutil.copy2(source, target)
+          Path('checkpoints/general/v13-selected-label.txt').write_text('v13-cmaes\n' if passed else 'v10-fallback\n')
+          print({'selected': 'v13-cmaes' if passed else 'v10-fallback', 'development_gate_passed': passed})
+          PY
+
+      - name: Evaluate frozen selection on fresh holdout
+        run: |
+          python -u compute/evaluate_general_policy.py \
+            --official-dir official \
+            --controller-source compute/riyadh_general.py \
+            --model checkpoints/general/models/v10-frozen-scale1.npz \
+            --unseen-start 14000 --unseen-count 100 --quiet \
+            --output checkpoints/general/v13-v10-holdout.json
+          python -u compute/evaluate_general_policy.py \
+            --official-dir official \
+            --controller-source compute/riyadh_general.py \
+            --model checkpoints/general/models/v13-selected.npz \
+            --unseen-start 14000 --unseen-count 100 --quiet \
+            --output checkpoints/general/v13-selected-holdout.json
+
+      - name: Gate holdout and diagnose
+        run: |
+          python compute/compare_general_runs.py \
+            --baseline checkpoints/general/v13-v10-holdout.json \
+            --candidate checkpoints/general/v13-selected-holdout.json \
+            --output checkpoints/general/v13-gate-holdout.json || true
+          python compute/analyze_general_runs.py \
+            --baseline checkpoints/general/v13-v10-holdout.json \
+            --candidate checkpoints/general/v13-selected-holdout.json \
+            --output checkpoints/general/v13-diagnostics-holdout.json
+
+      - name: Write durable V13 summary
+        if: always()
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          files = {
+            'search': 'checkpoints/general/v13-cmaes-search.json',
+            'development_gate': 'checkpoints/general/v13-gate-development.json',
+            'holdout_gate': 'checkpoints/general/v13-gate-holdout.json',
+            'holdout_diagnostics': 'checkpoints/general/v13-diagnostics-holdout.json',
+          }
+          payload = {
+            'commit': '${{ github.sha }}',
+            'workflow_run_id': '${{ github.run_id }}',
+            'workflow_run_attempt': '${{ github.run_attempt }}',
+            'selected_label': Path('checkpoints/general/v13-selected-label.txt').read_text().strip() if Path('checkpoints/general/v13-selected-label.txt').exists() else None,
+            'method': 'low-dimensional CMA-ES direct policy search over frozen V10',
+          }
+          for name, path in files.items():
+            file = Path(path)
+            payload[name] = json.loads(file.read_text()) if file.exists() else None
+          output = Path('checkpoints/general/v13-run-summary.json')
+          output.parent.mkdir(parents=True, exist_ok=True)
+          output.write_text(json.dumps(payload, indent=2, sort_keys=True) + '\n')
+          PY
+
+      - name: Publish latest V13 summary
+        if: always() && github.event_name == 'push'
+        run: |
+          mkdir -p results
+          cp checkpoints/general/v13-run-summary.json results/latest-v13-summary.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions-bot@users.noreply.github.com"
+          git add results/latest-v13-summary.json
+          if git diff --cached --quiet; then
+            echo "No V13 summary change"
+          else
+            git commit -m "Record latest V13 CMA-ES summary [skip ci]"
+            git push
+          fi
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: natural20-v13-cmaes-direct-policy-search
+          path: |
+            checkpoints/general/models/v10-frozen-scale1.npz
+            checkpoints/general/models/v13-cmaes.npz
+            checkpoints/general/models/v13-selected.npz
+            checkpoints/general/v13-selected-label.txt
+            checkpoints/general/v13-cmaes-search.json
+            checkpoints/general/v13-v10-development.json
+            checkpoints/general/v13-candidate-development.json
+            checkpoints/general/v13-gate-development.json
+            checkpoints/general/v13-v10-holdout.json
+            checkpoints/general/v13-selected-holdout.json
+            checkpoints/general/v13-gate-holdout.json
+            checkpoints/general/v13-diagnostics-holdout.json
+            checkpoints/general/v13-run-summary.json
+            official/models/riyadh_inverse_linear.npz
+            official/models/riyadh_inverse_linear.json
+          if-no-files-found: warn
