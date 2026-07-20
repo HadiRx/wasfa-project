@@ -1,0 +1,170 @@
+name: Natural-20 V13 Verification 500
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [controls-challenge-compute]
+    paths:
+      - compute/verify_v13_500.py
+      - .github/workflows/v13-verification-500.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: natural20-v13-verification-500-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify-v13-500:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+      - name: Checkout official challenge
+        run: git clone --depth 1 https://github.com/commaai/controls_challenge.git official
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - name: Install runtime
+        run: python -m pip install --upgrade pip pandas numpy onnxruntime matplotlib seaborn tqdm cmaes
+      - name: Download official dataset
+        working-directory: official
+        run: python -c "from tinyphysics import download_dataset; download_dataset()"
+
+      - name: Validate all frozen and verification splits
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          ranges={
+            'inverse_train':(0,5000),
+            'inverse_validation':(10000,500),
+            'v10_selection':(16500,100),
+            'v13_search':(13500,48),
+            'verification_500':(15000,500),
+          }
+          missing=[]
+          for name,(start,count) in ranges.items():
+            absent=[str(Path('official/data')/f'{i:05d}.csv') for i in range(start,start+count) if not (Path('official/data')/f'{i:05d}.csv').exists()]
+            print(name,start,count,len(absent)); missing+=absent[:10]
+          if missing: raise SystemExit('Missing files: '+', '.join(missing))
+          PY
+
+      - name: Train reproducible inverse model
+        run: |
+          python -u compute/train_warmup_inverse.py \
+            --data-dir official/data \
+            --train-start 0 --train-count 5000 \
+            --validation-start 10000 --validation-count 500 \
+            --output official/models/riyadh_inverse_linear.npz
+
+      - name: Run tests
+        run: python -m unittest discover -s tests -v
+
+      - name: Reproduce frozen V10
+        run: |
+          mkdir -p checkpoints/general/v10-scale-models checkpoints/general/v10-scale-dev checkpoints/general/models
+          python -u compute/evaluate_general_policy.py --official-dir official --controller-source compute/riyadh_v13_cma.py --disable-model --quiet --unseen-start 16500 --unseen-count 100 --output checkpoints/general/v10-v8-dev.json
+          for scale in 0.25 0.40 0.55 0.70 0.80 1.00; do
+            label=${scale/./p}
+            python compute/package_closed_loop_residual.py --source checkpoints/general/models/v10-closed-loop-conservative.npz --output checkpoints/general/v10-scale-models/v10-scale-${label}.npz --output-scale ${scale}
+            python -u compute/evaluate_general_policy.py --official-dir official --controller-source compute/riyadh_v13_cma.py --model checkpoints/general/v10-scale-models/v10-scale-${label}.npz --unseen-start 16500 --unseen-count 100 --quiet --output checkpoints/general/v10-scale-dev/v10-scale-${label}.json
+          done
+          python compute/select_general_candidate.py --baseline checkpoints/general/v10-v8-dev.json --candidate 0.25=checkpoints/general/v10-scale-dev/v10-scale-0p25.json=checkpoints/general/v10-scale-models/v10-scale-0p25.npz --candidate 0.40=checkpoints/general/v10-scale-dev/v10-scale-0p40.json=checkpoints/general/v10-scale-models/v10-scale-0p40.npz --candidate 0.55=checkpoints/general/v10-scale-dev/v10-scale-0p55.json=checkpoints/general/v10-scale-models/v10-scale-0p55.npz --candidate 0.70=checkpoints/general/v10-scale-dev/v10-scale-0p70.json=checkpoints/general/v10-scale-models/v10-scale-0p70.npz --candidate 0.80=checkpoints/general/v10-scale-dev/v10-scale-0p80.json=checkpoints/general/v10-scale-models/v10-scale-0p80.npz --candidate 1.00=checkpoints/general/v10-scale-dev/v10-scale-1p00.json=checkpoints/general/v10-scale-models/v10-scale-1p00.npz --output-model checkpoints/general/models/v10-selected.npz --output-scale checkpoints/general/v10-selected-scale.txt --output-report checkpoints/general/v10-selection.json
+
+      - name: Reproduce frozen V13 candidate with original seed
+        run: |
+          python -u compute/optimize_v13_cma.py \
+            --official-dir official \
+            --controller-source compute/riyadh_v13_cma.py \
+            --inverse-model official/models/riyadh_inverse_linear.npz \
+            --baseline-model checkpoints/general/models/v10-selected.npz \
+            --start 13500 --count 48 --batch 12 \
+            --population 10 --generations 12 --finalists 5 \
+            --sigma 0.65 --seed 20260720 \
+            --output-model checkpoints/general/models/v13-frozen.npz \
+            --output-report checkpoints/general/v13-reproduction-search.json
+
+      - name: Evaluate V10 and frozen V13 on fresh 500 segments
+        run: |
+          python -u compute/evaluate_general_policy.py \
+            --official-dir official \
+            --controller-source compute/riyadh_v13_cma.py \
+            --model checkpoints/general/models/v10-selected.npz \
+            --unseen-start 15000 --unseen-count 500 --quiet \
+            --output checkpoints/general/v13-v10-verification-500.json
+          python -u compute/evaluate_general_policy.py \
+            --official-dir official \
+            --controller-source compute/riyadh_v13_cma.py \
+            --model checkpoints/general/models/v13-frozen.npz \
+            --unseen-start 15000 --unseen-count 500 --quiet \
+            --output checkpoints/general/v13-candidate-verification-500.json
+
+      - name: Run distribution, bootstrap, and regression analysis
+        run: |
+          python -u compute/verify_v13_500.py \
+            --baseline checkpoints/general/v13-v10-verification-500.json \
+            --candidate checkpoints/general/v13-candidate-verification-500.json \
+            --data-dir official/data \
+            --minimum-segments 500 \
+            --bootstrap 10000 \
+            --seed 20260720 \
+            --output checkpoints/general/v13-verification-500.json
+          python compute/compare_general_runs.py \
+            --baseline checkpoints/general/v13-v10-verification-500.json \
+            --candidate checkpoints/general/v13-candidate-verification-500.json \
+            --output checkpoints/general/v13-verification-500-gate.json || true
+
+      - name: Write durable verification summary
+        if: always()
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          files={
+            'v10_selection':'checkpoints/general/v10-selection.json',
+            'v13_reproduction_search':'checkpoints/general/v13-reproduction-search.json',
+            'verification':'checkpoints/general/v13-verification-500.json',
+            'gate':'checkpoints/general/v13-verification-500-gate.json',
+          }
+          payload={'commit':'${{ github.sha }}','workflow_run_id':'${{ github.run_id }}','scope':'frozen-v13-independent-500-segment-verification','verification_range':[15000,15499]}
+          for key,path in files.items():
+            file=Path(path); payload[key]=json.loads(file.read_text()) if file.exists() else None
+          out=Path('checkpoints/general/v13-verification-500-summary.json'); out.parent.mkdir(parents=True,exist_ok=True); out.write_text(json.dumps(payload,indent=2,sort_keys=True)+'\n')
+          PY
+
+      - name: Publish latest verification summary
+        if: always() && github.event_name == 'push'
+        run: |
+          cp checkpoints/general/v13-verification-500-summary.json /tmp/latest-v13-verification-500.json
+          git fetch origin controls-challenge-compute
+          git checkout -B controls-challenge-compute origin/controls-challenge-compute
+          mkdir -p results
+          cp /tmp/latest-v13-verification-500.json results/latest-v13-verification-500.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions-bot@users.noreply.github.com"
+          git add results/latest-v13-verification-500.json
+          if git diff --cached --quiet; then
+            echo "No verification summary change"
+          else
+            git commit -m "Record V13 500-segment verification [skip ci]"
+            git push origin HEAD:controls-challenge-compute
+          fi
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: natural20-v13-verification-500
+          path: |
+            checkpoints/general/models/v10-selected.npz
+            checkpoints/general/models/v13-frozen.npz
+            checkpoints/general/v13-reproduction-search.json
+            checkpoints/general/v13-v10-verification-500.json
+            checkpoints/general/v13-candidate-verification-500.json
+            checkpoints/general/v13-verification-500.json
+            checkpoints/general/v13-verification-500-gate.json
+            checkpoints/general/v13-verification-500-summary.json
+            official/models/riyadh_inverse_linear.npz
+            official/models/riyadh_inverse_linear.json
+          if-no-files-found: warn
