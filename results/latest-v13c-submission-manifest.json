@@ -1,0 +1,20 @@
+{
+  "author": "Hadi Ameayr (HadiRx)",
+  "challenge": "comma Controls Challenge v2",
+  "controller_name": "riyadh_v13c",
+  "deterministic": true,
+  "evaluation_segments": 5000,
+  "files": {
+    "README.md": "7029a79015a8282296041596b63dc3cfd709a6adf38c1a6f3ea137873b1b070d",
+    "controllers/riyadh_v13c.py": "b7da0a0793def5b770f73aa35aab5e6f901f2cfb3abeaf238edef3bb462b7928",
+    "evidence/v13c_refinement_summary.json": "1392bbc089a5e0a2d218e16d47e9d9c82cc9ca35a62ce1463a0f2a61fd14b158",
+    "evidence/verification_1000.json": "ddd03250a5cce3181085c4b97014a5e6300068ce427985f0436d0532e84e46a6",
+    "evidence/verification_5000.json": "69130ef7b3c661f8f22f7791f9c94ff2c13f118a56ea182b7fb1255c92348d40",
+    "models/riyadh_general_policy.npz": "ccbcc61439eefd0e52aeb9c779c9c7f8677670d9bfcc37ab3e56ffad50787b02",
+    "models/riyadh_inverse_linear.npz": "d69203730ad1ec2885287c74a5fd798ff82c3d8c89458ed2a9bcba71b4c7cf82",
+    "report.html": "59cc5c9aebd9b4cb650b77fa5fe44165c899113c6812acf9fc74f4e786986148"
+  },
+  "name": "Riyadh Natural-20 V13-C Hard Guard Controller",
+  "official_controls_challenge_commit": "be8edfa849acdccfa2cb0092151ab28590d63c03",
+  "source_commit": "4586160a8bfb52e2a3a15f880a815d7c1cb30950"
+}
