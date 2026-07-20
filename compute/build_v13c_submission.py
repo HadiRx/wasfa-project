@@ -34,7 +34,8 @@ def main(a):
 
   readme = f"""# Riyadh Natural-20 — V13-C Submission
 
-Author: Hadi Ameayr (HadiRx)
+Author: Hadi Alanazi
+Email: hadi-alenzi@hotmail.com
 
 This package contains the frozen V13-C hard-guard controller for comma Controls Challenge v2.
 
@@ -69,7 +70,8 @@ The final frozen candidate was subsequently verified on 1,000 and 5,000 addition
   checksums = {str(p.relative_to(out)): sha256(p) for p in files}
   manifest = {
     "name": "Riyadh Natural-20 V13-C Hard Guard Controller",
-    "author": "Hadi Ameayr (HadiRx)",
+    "author": "Hadi Alanazi",
+    "email": "hadi-alenzi@hotmail.com",
     "challenge": "comma Controls Challenge v2",
     "source_commit": a.commit,
     "official_controls_challenge_commit": a.official_commit,
