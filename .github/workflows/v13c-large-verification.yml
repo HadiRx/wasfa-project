@@ -1,0 +1,182 @@
+name: Natural-20 V13-C Large Verification
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [controls-challenge-compute]
+    paths:
+      - compute/merge_and_verify_runs.py
+      - .github/workflows/v13c-large-verification.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: natural20-v13c-large-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-frozen-models:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+      - run: git clone --depth 1 https://github.com/commaai/controls_challenge.git official
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - run: python -m pip install --upgrade pip pandas numpy onnxruntime matplotlib seaborn tqdm cmaes
+      - working-directory: official
+        run: python -c "from tinyphysics import download_dataset; download_dataset()"
+      - name: Reproduce frozen V10, V13-A, and accepted V13-C
+        run: |
+          python -u compute/train_warmup_inverse.py --data-dir official/data --train-start 0 --train-count 5000 --validation-start 10000 --validation-count 500 --output official/models/riyadh_inverse_linear.npz
+          mkdir -p checkpoints/general/v10-scale-models checkpoints/general/v10-scale-dev checkpoints/general/models
+          python -u compute/evaluate_general_policy.py --official-dir official --controller-source compute/riyadh_v13_cma.py --disable-model --quiet --unseen-start 16500 --unseen-count 100 --output checkpoints/general/v10-v8-dev.json
+          for scale in 0.25 0.40 0.55 0.70 0.80 1.00; do
+            label=${scale/./p}
+            python compute/package_closed_loop_residual.py --source checkpoints/general/models/v10-closed-loop-conservative.npz --output checkpoints/general/v10-scale-models/v10-scale-${label}.npz --output-scale ${scale}
+            python -u compute/evaluate_general_policy.py --official-dir official --controller-source compute/riyadh_v13_cma.py --model checkpoints/general/v10-scale-models/v10-scale-${label}.npz --unseen-start 16500 --unseen-count 100 --quiet --output checkpoints/general/v10-scale-dev/v10-scale-${label}.json
+          done
+          python compute/select_general_candidate.py --baseline checkpoints/general/v10-v8-dev.json --candidate 0.25=checkpoints/general/v10-scale-dev/v10-scale-0p25.json=checkpoints/general/v10-scale-models/v10-scale-0p25.npz --candidate 0.40=checkpoints/general/v10-scale-dev/v10-scale-0p40.json=checkpoints/general/v10-scale-models/v10-scale-0p40.npz --candidate 0.55=checkpoints/general/v10-scale-dev/v10-scale-0p55.json=checkpoints/general/v10-scale-models/v10-scale-0p55.npz --candidate 0.70=checkpoints/general/v10-scale-dev/v10-scale-0p70.json=checkpoints/general/v10-scale-models/v10-scale-0p70.npz --candidate 0.80=checkpoints/general/v10-scale-dev/v10-scale-0p80.json=checkpoints/general/v10-scale-models/v10-scale-0p80.npz --candidate 1.00=checkpoints/general/v10-scale-dev/v10-scale-1p00.json=checkpoints/general/v10-scale-models/v10-scale-1p00.npz --output-model checkpoints/general/models/v10-selected.npz --output-scale checkpoints/general/v10-selected-scale.txt --output-report checkpoints/general/v10-selection.json
+          python -u compute/optimize_v13_cma.py --official-dir official --controller-source compute/riyadh_v13_cma.py --inverse-model official/models/riyadh_inverse_linear.npz --baseline-model checkpoints/general/models/v10-selected.npz --start 13500 --count 48 --batch 12 --population 10 --generations 12 --finalists 5 --sigma 0.65 --seed 20260720 --output-model checkpoints/general/models/v13a-frozen.npz --output-report checkpoints/general/v13a-reproduction.json
+          python -u compute/optimize_v13c_cma.py --official-dir official --controller-source compute/riyadh_v13_cma.py --inverse-model official/models/riyadh_inverse_linear.npz --baseline-model checkpoints/general/models/v13a-frozen.npz --start 16000 --count 96 --batch 16 --population 12 --generations 16 --finalists 6 --sigma 0.16 --seed 20260722 --guard-segments 15692,15338,15377,15273,15297,15029,15199,15166 --output-model checkpoints/general/models/v13c-frozen.npz --output-report checkpoints/general/v13c-reproduction.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: v13c-frozen-models
+          path: |
+            checkpoints/general/models/v13a-frozen.npz
+            checkpoints/general/models/v13c-frozen.npz
+            official/models/riyadh_inverse_linear.npz
+            checkpoints/general/v13c-reproduction.json
+
+  verify-1000-shards:
+    needs: build-frozen-models
+    strategy:
+      fail-fast: false
+      matrix:
+        start: [17000, 17500]
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+      - run: git clone --depth 1 https://github.com/commaai/controls_challenge.git official
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - run: python -m pip install --upgrade pip pandas numpy onnxruntime matplotlib seaborn tqdm
+      - working-directory: official
+        run: python -c "from tinyphysics import download_dataset; download_dataset()"
+      - uses: actions/download-artifact@v4
+        with:
+          name: v13c-frozen-models
+          path: frozen
+      - name: Evaluate shard
+        run: |
+          mkdir -p official/models shards
+          cp frozen/official/models/riyadh_inverse_linear.npz official/models/riyadh_inverse_linear.npz
+          python -u compute/evaluate_general_policy.py --official-dir official --controller-source compute/riyadh_v13_cma.py --model frozen/checkpoints/general/models/v13a-frozen.npz --unseen-start ${{ matrix.start }} --unseen-count 500 --quiet --output shards/v13a-${{ matrix.start }}.json
+          python -u compute/evaluate_general_policy.py --official-dir official --controller-source compute/riyadh_v13_cma.py --model frozen/checkpoints/general/models/v13c-frozen.npz --unseen-start ${{ matrix.start }} --unseen-count 500 --quiet --output shards/v13c-${{ matrix.start }}.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: v13c-1000-${{ matrix.start }}
+          path: shards/*.json
+
+  aggregate-1000:
+    needs: verify-1000-shards
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install numpy
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: v13c-1000-*
+          path: shards
+          merge-multiple: true
+      - name: Aggregate and gate 1000
+        run: python -u compute/merge_and_verify_runs.py --baseline-glob 'shards/v13a-*.json' --candidate-glob 'shards/v13c-*.json' --expected 1000 --scope v13c-fresh-1000 --bootstrap 20000 --seed 20260723 --require-pass --output checkpoints/general/v13c-verification-1000.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: natural20-v13c-verification-1000
+          path: checkpoints/general/v13c-verification-1000.json
+      - name: Publish 1000 summary
+        run: |
+          cp checkpoints/general/v13c-verification-1000.json /tmp/latest-v13c-verification-1000.json
+          git fetch origin controls-challenge-compute
+          git checkout -B controls-challenge-compute origin/controls-challenge-compute
+          mkdir -p results
+          cp /tmp/latest-v13c-verification-1000.json results/latest-v13c-verification-1000.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions-bot@users.noreply.github.com"
+          git add results/latest-v13c-verification-1000.json
+          if git diff --cached --quiet; then echo no-change; else git commit -m "Record V13-C 1000-segment verification [skip ci]"; git push origin HEAD:controls-challenge-compute; fi
+
+  verify-5000-shards:
+    needs: [build-frozen-models, aggregate-1000]
+    strategy:
+      fail-fast: false
+      matrix:
+        start: [5000, 5500, 6000, 6500, 7000, 7500, 8000, 8500, 9000, 9500]
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+      - run: git clone --depth 1 https://github.com/commaai/controls_challenge.git official
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - run: python -m pip install --upgrade pip pandas numpy onnxruntime matplotlib seaborn tqdm
+      - working-directory: official
+        run: python -c "from tinyphysics import download_dataset; download_dataset()"
+      - uses: actions/download-artifact@v4
+        with:
+          name: v13c-frozen-models
+          path: frozen
+      - name: Evaluate final shard
+        run: |
+          mkdir -p official/models shards
+          cp frozen/official/models/riyadh_inverse_linear.npz official/models/riyadh_inverse_linear.npz
+          python -u compute/evaluate_general_policy.py --official-dir official --controller-source compute/riyadh_v13_cma.py --model frozen/checkpoints/general/models/v13a-frozen.npz --unseen-start ${{ matrix.start }} --unseen-count 500 --quiet --output shards/v13a-${{ matrix.start }}.json
+          python -u compute/evaluate_general_policy.py --official-dir official --controller-source compute/riyadh_v13_cma.py --model frozen/checkpoints/general/models/v13c-frozen.npz --unseen-start ${{ matrix.start }} --unseen-count 500 --quiet --output shards/v13c-${{ matrix.start }}.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: v13c-5000-${{ matrix.start }}
+          path: shards/*.json
+
+  aggregate-5000:
+    needs: verify-5000-shards
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install numpy
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: v13c-5000-*
+          path: shards
+          merge-multiple: true
+      - name: Aggregate final 5000
+        run: python -u compute/merge_and_verify_runs.py --baseline-glob 'shards/v13a-*.json' --candidate-glob 'shards/v13c-*.json' --expected 5000 --scope v13c-final-5000 --bootstrap 30000 --seed 20260724 --require-pass --output checkpoints/general/v13c-verification-5000.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: natural20-v13c-final-verification-5000
+          path: checkpoints/general/v13c-verification-5000.json
+      - name: Publish final 5000 summary
+        run: |
+          cp checkpoints/general/v13c-verification-5000.json /tmp/latest-v13c-verification-5000.json
+          git fetch origin controls-challenge-compute
+          git checkout -B controls-challenge-compute origin/controls-challenge-compute
+          mkdir -p results
+          cp /tmp/latest-v13c-verification-5000.json results/latest-v13c-verification-5000.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions-bot@users.noreply.github.com"
+          git add results/latest-v13c-verification-5000.json
+          if git diff --cached --quiet; then echo no-change; else git commit -m "Record V13-C final 5000-segment verification [skip ci]"; git push origin HEAD:controls-challenge-compute; fi
