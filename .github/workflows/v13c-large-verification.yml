@@ -87,6 +87,8 @@ jobs:
   aggregate-1000:
     needs: verify-1000-shards
     runs-on: ubuntu-latest
+    outputs:
+      passed: ${{ steps.gate.outputs.passed }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -98,13 +100,27 @@ jobs:
           pattern: v13c-1000-*
           path: shards
           merge-multiple: true
-      - name: Aggregate and gate 1000
-        run: python -u compute/merge_and_verify_runs.py --baseline-glob 'shards/v13a-*.json' --candidate-glob 'shards/v13c-*.json' --expected 1000 --scope v13c-fresh-1000 --bootstrap 20000 --seed 20260723 --require-pass --output checkpoints/general/v13c-verification-1000.json
+      - name: Aggregate 1000 without discarding failed report
+        run: python -u compute/merge_and_verify_runs.py --baseline-glob 'shards/v13a-*.json' --candidate-glob 'shards/v13c-*.json' --expected 1000 --scope v13c-fresh-1000 --bootstrap 20000 --seed 20260723 --output checkpoints/general/v13c-verification-1000.json
+      - id: gate
+        name: Read 1000 gate result
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          report=json.loads(Path('checkpoints/general/v13c-verification-1000.json').read_text())
+          passed=bool(report['gate']['passed'])
+          with open(os.environ['GITHUB_OUTPUT'],'a') as f: f.write(f"passed={'true' if passed else 'false'}\n")
+          print({'passed':passed,'gate':report['gate'],'change_percent':report['change_percent']})
+          PY
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: natural20-v13c-verification-1000
           path: checkpoints/general/v13c-verification-1000.json
+          if-no-files-found: error
       - name: Publish 1000 summary
+        if: always()
         run: |
           cp checkpoints/general/v13c-verification-1000.json /tmp/latest-v13c-verification-1000.json
           git fetch origin controls-challenge-compute
@@ -118,6 +134,7 @@ jobs:
 
   verify-5000-shards:
     needs: [build-frozen-models, aggregate-1000]
+    if: needs.aggregate-1000.outputs.passed == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -164,12 +181,15 @@ jobs:
           path: shards
           merge-multiple: true
       - name: Aggregate final 5000
-        run: python -u compute/merge_and_verify_runs.py --baseline-glob 'shards/v13a-*.json' --candidate-glob 'shards/v13c-*.json' --expected 5000 --scope v13c-final-5000 --bootstrap 30000 --seed 20260724 --require-pass --output checkpoints/general/v13c-verification-5000.json
+        run: python -u compute/merge_and_verify_runs.py --baseline-glob 'shards/v13a-*.json' --candidate-glob 'shards/v13c-*.json' --expected 5000 --scope v13c-final-5000 --bootstrap 30000 --seed 20260724 --output checkpoints/general/v13c-verification-5000.json
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: natural20-v13c-final-verification-5000
           path: checkpoints/general/v13c-verification-5000.json
+          if-no-files-found: error
       - name: Publish final 5000 summary
+        if: always()
         run: |
           cp checkpoints/general/v13c-verification-5000.json /tmp/latest-v13c-verification-5000.json
           git fetch origin controls-challenge-compute
@@ -180,3 +200,11 @@ jobs:
           git config user.email "41898282+github-actions-bot@users.noreply.github.com"
           git add results/latest-v13c-verification-5000.json
           if git diff --cached --quiet; then echo no-change; else git commit -m "Record V13-C final 5000-segment verification [skip ci]"; git push origin HEAD:controls-challenge-compute; fi
+      - name: Enforce final 5000 gate
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          passed=bool(json.loads(Path('checkpoints/general/v13c-verification-5000.json').read_text())['gate']['passed'])
+          if not passed: raise SystemExit('final 5000 verification gate failed')
+          PY
