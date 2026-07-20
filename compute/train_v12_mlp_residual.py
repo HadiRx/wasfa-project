@@ -1,304 +1,114 @@
-"""Train a compact nonlinear residual policy from causal closed-loop rollouts.
+"""Train a compact nonlinear residual policy from public warmup telemetry.
 
-The implementation follows the small, inspectable MLP training style popularized
-by Andrej Karpathy's micrograd/zero-to-hero material, but uses vectorized NumPy
-for practical speed.  Logged steer commands are used only as a supervised
-teacher; segment identity is never exposed to the policy.
+Uses a small vectorized NumPy MLP inspired by Karpathy's micrograd teaching
+style. Only public warmup steer commands are used as supervised targets; route
+identity is never exposed to the policy.
 """
-
 from __future__ import annotations
-
-import argparse
+import argparse, json, os, shutil, sys
 from contextlib import contextmanager
-import json
-import os
 from pathlib import Path
-import shutil
-import sys
-
 import numpy as np
-
 
 @contextmanager
 def working_directory(path):
-  previous = Path.cwd()
-  os.chdir(path)
-  try:
-    yield
-  finally:
-    os.chdir(previous)
-
+  previous = Path.cwd(); os.chdir(path)
+  try: yield
+  finally: os.chdir(previous)
 
 class RecordingPolicy:
-  def __init__(self):
-    self.features = []
-
+  def __init__(self): self.features = []
   def predict(self, features):
     self.features.append(np.asarray(features, dtype=np.float32).copy())
     return 0.0
 
-
-def collect_examples(model, simulator_type, controller_type, segments, residual_limit):
-  xs, ys = [], []
-  records = []
+def collect_examples(model, simulator_type, controller_type, segments, residual_limit, sample_start, sample_stop):
+  xs, ys, records = [], [], []
   for segment in segments:
-    controller = controller_type()
-    recorder = RecordingPolicy()
-    controller.policy = recorder
+    controller = controller_type(); recorder = RecordingPolicy(); controller.policy = recorder
     simulator = simulator_type(model, f"data/{segment}.csv", controller, debug=False)
-    cost = simulator.rollout()
-    records.append({"segment": segment, **cost})
-
-    # update() is called from step 20.  Scored control is steps 100:500,
-    # therefore recorder features 80:480 align exactly with those steps.
-    features = np.asarray(recorder.features[80:480], dtype=np.float32)
-    baseline_actions = np.asarray(simulator.action_history[100:500], dtype=np.float32)
-    teacher_actions = simulator.data["steer_command"].values[100:500].astype(np.float32)
-    count = min(len(features), len(baseline_actions), len(teacher_actions))
-    if count == 0:
-      continue
-    target_residual = np.clip(
-      teacher_actions[:count] - baseline_actions[:count],
-      -residual_limit,
-      residual_limit,
-    )
-    finite = np.isfinite(features[:count]).all(axis=1) & np.isfinite(target_residual)
-    xs.append(features[:count][finite])
-    ys.append(target_residual[finite, None])
-  if not xs:
-    raise RuntimeError("no finite V12 training examples collected")
-  return np.concatenate(xs), np.concatenate(ys), records
-
+    seg_x, seg_y = [], []
+    while simulator.step_idx < len(simulator.data):
+      step_idx = simulator.step_idx
+      simulator.step()
+      if sample_start <= step_idx < sample_stop and recorder.features:
+        features = recorder.features[-1]
+        baseline_action = float(controller.previous_action)
+        teacher_action = float(simulator.data["steer_command"].iloc[step_idx])
+        residual = float(np.clip(teacher_action - baseline_action, -residual_limit, residual_limit))
+        if np.isfinite(features).all() and np.isfinite(residual):
+          seg_x.append(features); seg_y.append([residual])
+    records.append({"segment": segment, **simulator.compute_cost()})
+    if seg_x:
+      xs.append(np.asarray(seg_x, dtype=np.float32)); ys.append(np.asarray(seg_y, dtype=np.float32))
+  if not xs: raise RuntimeError("no finite V12 warmup examples collected")
+  x, y = np.concatenate(xs), np.concatenate(ys)
+  if x.size == 0 or y.size == 0: raise RuntimeError("empty V12 training matrix")
+  return x, y, records
 
 def rollout_summary(records):
-  values = np.asarray([item["total_cost"] for item in records], dtype=np.float64)
-  return {
-    "segments": int(len(values)),
-    "mean_total_cost": float(values.mean()),
-    "median_total_cost": float(np.median(values)),
-    "p90_total_cost": float(np.percentile(values, 90)),
-    "worst_total_cost": float(values.max()),
-  }
-
+  v = np.asarray([r["total_cost"] for r in records], dtype=np.float64)
+  return {"segments": int(len(v)), "mean_total_cost": float(v.mean()), "median_total_cost": float(np.median(v)), "p90_total_cost": float(np.percentile(v,90)), "worst_total_cost": float(v.max())}
 
 def prediction_metrics(labels, predictions):
-  error = predictions - labels
-  return {
-    "samples": int(labels.size),
-    "rmse": float(np.sqrt(np.mean(error ** 2))),
-    "mae": float(np.mean(np.abs(error))),
-    "correlation": float(np.corrcoef(labels.ravel(), predictions.ravel())[0, 1]),
-  }
-
+  labels = np.asarray(labels, dtype=np.float64).reshape(-1); predictions = np.asarray(predictions, dtype=np.float64).reshape(-1)
+  if labels.size == 0 or predictions.size != labels.size: raise RuntimeError("invalid V12 metric inputs")
+  e = predictions - labels
+  corr = float(np.corrcoef(labels, predictions)[0,1]) if labels.std() > 1e-12 and predictions.std() > 1e-12 else 0.0
+  return {"samples": int(labels.size), "rmse": float(np.sqrt(np.mean(e**2))), "mae": float(np.mean(np.abs(e))), "correlation": corr}
 
 class TinyMLP:
   def __init__(self, input_dim, hidden1, hidden2, rng):
-    # Fan-in scaling keeps tanh activations out of saturation at initialization.
     self.params = {
-      "w1": (rng.randn(input_dim, hidden1) / np.sqrt(input_dim)).astype(np.float32),
-      "b1": np.zeros(hidden1, dtype=np.float32),
-      "w2": (rng.randn(hidden1, hidden2) / np.sqrt(hidden1)).astype(np.float32),
-      "b2": np.zeros(hidden2, dtype=np.float32),
-      "w3": (rng.randn(hidden2, 1) / np.sqrt(hidden2)).astype(np.float32),
-      "b3": np.zeros(1, dtype=np.float32),
-    }
-
-  def forward(self, x):
-    z1 = x @ self.params["w1"] + self.params["b1"]
-    h1 = np.tanh(z1)
-    z2 = h1 @ self.params["w2"] + self.params["b2"]
-    h2 = np.tanh(z2)
-    raw = h2 @ self.params["w3"] + self.params["b3"]
-    out = np.tanh(raw)
-    return out, (x, h1, h2, out)
-
-  def backward(self, cache, grad_out, weight_decay):
-    x, h1, h2, out = cache
-    grad_raw = grad_out * (1.0 - out ** 2)
-    grads = {}
-    grads["w3"] = h2.T @ grad_raw + weight_decay * self.params["w3"]
-    grads["b3"] = grad_raw.sum(axis=0)
-    grad_h2 = grad_raw @ self.params["w3"].T
-    grad_z2 = grad_h2 * (1.0 - h2 ** 2)
-    grads["w2"] = h1.T @ grad_z2 + weight_decay * self.params["w2"]
-    grads["b2"] = grad_z2.sum(axis=0)
-    grad_h1 = grad_z2 @ self.params["w2"].T
-    grad_z1 = grad_h1 * (1.0 - h1 ** 2)
-    grads["w1"] = x.T @ grad_z1 + weight_decay * self.params["w1"]
-    grads["b1"] = grad_z1.sum(axis=0)
-    return grads
-
+      "w1": (rng.randn(input_dim,hidden1)/np.sqrt(input_dim)).astype(np.float32), "b1": np.zeros(hidden1,np.float32),
+      "w2": (rng.randn(hidden1,hidden2)/np.sqrt(hidden1)).astype(np.float32), "b2": np.zeros(hidden2,np.float32),
+      "w3": (rng.randn(hidden2,1)/np.sqrt(hidden2)).astype(np.float32), "b3": np.zeros(1,np.float32)}
+  def forward(self,x):
+    h1=np.tanh(x@self.params["w1"]+self.params["b1"]); h2=np.tanh(h1@self.params["w2"]+self.params["b2"]); out=np.tanh(h2@self.params["w3"]+self.params["b3"])
+    return out,(x,h1,h2,out)
+  def backward(self,cache,grad_out,wd):
+    x,h1,h2,out=cache; gr=grad_out*(1-out**2)
+    g={"w3":h2.T@gr+wd*self.params["w3"],"b3":gr.sum(0)}
+    gz2=(gr@self.params["w3"].T)*(1-h2**2); g["w2"]=h1.T@gz2+wd*self.params["w2"]; g["b2"]=gz2.sum(0)
+    gz1=(gz2@self.params["w2"].T)*(1-h1**2); g["w1"]=x.T@gz1+wd*self.params["w1"]; g["b1"]=gz1.sum(0)
+    return g
 
 def main(args):
-  root = Path.cwd()
-  official = (root / args.official_dir).resolve()
-  source = (root / args.controller_source).resolve()
-  inverse_model = (root / args.inverse_model).resolve()
-  output = (root / args.output).resolve()
-  shutil.copy2(source, official / "controllers" / "riyadh_general.py")
-  os.environ["RIYADH_GENERAL_INVERSE_MODEL"] = str(inverse_model)
-  os.environ["RIYADH_GENERAL_MODEL"] = str(official / "models" / "disabled-v12.npz")
-  sys.path.insert(0, str(official))
-
-  train_segments = [f"{x:05d}" for x in range(args.train_start, args.train_start + args.train_count)]
-  validation_segments = [
-    f"{x:05d}" for x in range(args.validation_start, args.validation_start + args.validation_count)
-  ]
-  if set(train_segments) & set(validation_segments):
-    raise SystemExit("V12 train and validation splits overlap")
-
+  root=Path.cwd(); official=(root/args.official_dir).resolve(); source=(root/args.controller_source).resolve(); inverse=(root/args.inverse_model).resolve(); output=(root/args.output).resolve()
+  shutil.copy2(source,official/"controllers"/"riyadh_general.py"); os.environ["RIYADH_GENERAL_INVERSE_MODEL"]=str(inverse); os.environ["RIYADH_GENERAL_MODEL"]=str(official/"models"/"disabled-v12.npz"); sys.path.insert(0,str(official))
+  train_segments=[f"{x:05d}" for x in range(args.train_start,args.train_start+args.train_count)]; val_segments=[f"{x:05d}" for x in range(args.validation_start,args.validation_start+args.validation_count)]
+  if set(train_segments)&set(val_segments): raise SystemExit("V12 train/validation overlap")
   with working_directory(official):
-    from tinyphysics import TinyPhysicsModel, TinyPhysicsSimulator
-    from controllers.riyadh_general import Controller, FEATURE_COUNT
-
-    simulator_model = TinyPhysicsModel("models/tinyphysics.onnx", debug=False)
-    train_x, train_y, train_records = collect_examples(
-      simulator_model, TinyPhysicsSimulator, Controller, train_segments, args.residual_limit
-    )
-    val_x, val_y, val_records = collect_examples(
-      simulator_model, TinyPhysicsSimulator, Controller, validation_segments, args.residual_limit
-    )
-
-  feature_mean = train_x.mean(axis=0).astype(np.float32)
-  feature_scale = np.maximum(train_x.std(axis=0).astype(np.float32), 1e-4)
-  train_x = ((train_x - feature_mean) / feature_scale).astype(np.float32)
-  val_x = ((val_x - feature_mean) / feature_scale).astype(np.float32)
-  train_target = (train_y / args.residual_limit).astype(np.float32)
-  val_target = (val_y / args.residual_limit).astype(np.float32)
-
-  if feature_mean.shape != (FEATURE_COUNT,):
-    raise RuntimeError(f"V12 feature mismatch: {feature_mean.shape}")
-
-  rng = np.random.RandomState(args.seed)
-  network = TinyMLP(FEATURE_COUNT, args.hidden1, args.hidden2, rng)
-  adam_m = {name: np.zeros_like(value) for name, value in network.params.items()}
-  adam_v = {name: np.zeros_like(value) for name, value in network.params.items()}
-  best_params = {name: value.copy() for name, value in network.params.items()}
-  best_val = float("inf")
-  history = []
-  step = 0
-
+    from tinyphysics import TinyPhysicsModel,TinyPhysicsSimulator
+    from controllers.riyadh_general import Controller,FEATURE_COUNT
+    model=TinyPhysicsModel("models/tinyphysics.onnx",debug=False)
+    train_x,train_y,train_records=collect_examples(model,TinyPhysicsSimulator,Controller,train_segments,args.residual_limit,args.sample_start,args.sample_stop)
+    val_x,val_y,val_records=collect_examples(model,TinyPhysicsSimulator,Controller,val_segments,args.residual_limit,args.sample_start,args.sample_stop)
+  mean=train_x.mean(0).astype(np.float32); scale=np.maximum(train_x.std(0).astype(np.float32),1e-4)
+  train_x=((train_x-mean)/scale).astype(np.float32); val_x=((val_x-mean)/scale).astype(np.float32); train_t=(train_y/args.residual_limit).astype(np.float32); val_t=(val_y/args.residual_limit).astype(np.float32)
+  if mean.shape!=(FEATURE_COUNT,): raise RuntimeError(f"V12 feature mismatch {mean.shape}")
+  for name,a in {"train_x":train_x,"train_t":train_t,"val_x":val_x,"val_t":val_t}.items():
+    if a.size==0 or not np.isfinite(a).all(): raise RuntimeError(f"non-finite or empty {name}")
+  rng=np.random.RandomState(args.seed); net=TinyMLP(FEATURE_COUNT,args.hidden1,args.hidden2,rng); m={k:np.zeros_like(v) for k,v in net.params.items()}; vv={k:np.zeros_like(v) for k,v in net.params.items()}; best={k:v.copy() for k,v in net.params.items()}; best_val=float("inf"); history=[]; step=0
   for epoch in range(args.epochs):
-    order = rng.permutation(len(train_x))
-    epoch_losses = []
-    for start in range(0, len(order), args.batch_size):
-      indices = order[start:start + args.batch_size]
-      xb, yb = train_x[indices], train_target[indices]
-      prediction, cache = network.forward(xb)
-      error = prediction - yb
-      loss = float(np.mean(error ** 2))
-      grad_out = (2.0 / len(xb)) * error
-      grads = network.backward(cache, grad_out, args.weight_decay)
-      norm = float(np.sqrt(sum(np.sum(g * g) for g in grads.values())))
-      clip = min(1.0, args.gradient_clip / max(norm, 1e-12))
-      step += 1
-      for name, grad in grads.items():
-        grad = grad * clip
-        adam_m[name] = args.beta1 * adam_m[name] + (1.0 - args.beta1) * grad
-        adam_v[name] = args.beta2 * adam_v[name] + (1.0 - args.beta2) * (grad * grad)
-        m_hat = adam_m[name] / (1.0 - args.beta1 ** step)
-        v_hat = adam_v[name] / (1.0 - args.beta2 ** step)
-        network.params[name] -= args.learning_rate * m_hat / (np.sqrt(v_hat) + 1e-8)
-      epoch_losses.append(loss)
+    losses=[]; order=rng.permutation(len(train_x))
+    for start in range(0,len(order),args.batch_size):
+      idx=order[start:start+args.batch_size]; xb,yb=train_x[idx],train_t[idx]; pred,cache=net.forward(xb); err=pred-yb; loss=float(np.mean(err**2))
+      if not np.isfinite(loss): raise RuntimeError(f"non-finite training loss epoch {epoch+1}")
+      grads=net.backward(cache,(2.0/len(xb))*err,args.weight_decay); norm=float(np.sqrt(sum(np.sum(g*g) for g in grads.values()))); clip=min(1.0,args.gradient_clip/max(norm,1e-12)); step+=1
+      for k,g in grads.items():
+        g*=clip; m[k]=args.beta1*m[k]+(1-args.beta1)*g; vv[k]=args.beta2*vv[k]+(1-args.beta2)*(g*g); mh=m[k]/(1-args.beta1**step); vh=vv[k]/(1-args.beta2**step); net.params[k]-=args.learning_rate*mh/(np.sqrt(vh)+1e-8)
+      losses.append(loss)
+    vp,_=net.forward(val_x); vl=float(np.mean((vp-val_t)**2))
+    if not np.isfinite(vl): raise RuntimeError(f"non-finite validation loss epoch {epoch+1}")
+    if vl<best_val: best_val=vl; best={k:v.copy() for k,v in net.params.items()}
+    history.append({"epoch":epoch+1,"train_loss":float(np.mean(losses)),"validation_loss":vl}); print(f"V12_EPOCH epoch={epoch+1} train={np.mean(losses):.8f} val={vl:.8f}",flush=True)
+  net.params=best; train_pred=net.forward(train_x)[0]*args.residual_limit; val_pred=net.forward(val_x)[0]*args.residual_limit
+  output.parent.mkdir(parents=True,exist_ok=True)
+  np.savez_compressed(output,feature_mean=mean,feature_scale=scale,w1=best["w1"],b1=best["b1"],w2=best["w2"],b2=best["b2"],w3=best["w3"],b3=best["b3"],residual_limit=np.asarray([args.residual_limit],np.float32),output_scale=np.asarray([args.output_scale],np.float32),ood_gate_start=np.asarray([args.ood_gate_start],np.float32),ood_gate_width=np.asarray([args.ood_gate_width],np.float32))
+  meta={"scope":"v12-public-warmup-supervised-causal-mlp-residual","architecture":[FEATURE_COUNT,args.hidden1,args.hidden2,1],"seed":args.seed,"train_segments":train_segments,"validation_segments":val_segments,"sample_window":[args.sample_start,args.sample_stop],"training":{"epochs":args.epochs,"batch_size":args.batch_size,"learning_rate":args.learning_rate,"weight_decay":args.weight_decay,"gradient_clip":args.gradient_clip,"residual_limit":args.residual_limit,"output_scale":args.output_scale,"ood_gate_start":args.ood_gate_start,"ood_gate_width":args.ood_gate_width},"teacher_baseline_train":rollout_summary(train_records),"teacher_baseline_validation":rollout_summary(val_records),"train_prediction":prediction_metrics(train_y,train_pred),"validation_prediction":prediction_metrics(val_y,val_pred),"best_validation_loss":best_val,"history":history,"model":str(output)}
+  output.with_suffix(".json").write_text(json.dumps(meta,indent=2,sort_keys=True,allow_nan=False)+"\n",encoding="utf-8")
+  print(json.dumps({"architecture":meta["architecture"],"train_prediction":meta["train_prediction"],"validation_prediction":meta["validation_prediction"],"model":str(output)},sort_keys=True,allow_nan=False))
 
-    val_prediction, _ = network.forward(val_x)
-    val_loss = float(np.mean((val_prediction - val_target) ** 2))
-    if val_loss < best_val:
-      best_val = val_loss
-      best_params = {name: value.copy() for name, value in network.params.items()}
-    history.append({
-      "epoch": epoch + 1,
-      "train_loss": float(np.mean(epoch_losses)),
-      "validation_loss": val_loss,
-    })
-    print(
-      f"V12_EPOCH epoch={epoch + 1} train={np.mean(epoch_losses):.8f} val={val_loss:.8f}",
-      flush=True,
-    )
-
-  network.params = best_params
-  train_prediction = network.forward(train_x)[0] * args.residual_limit
-  val_prediction = network.forward(val_x)[0] * args.residual_limit
-
-  output.parent.mkdir(parents=True, exist_ok=True)
-  np.savez_compressed(
-    output,
-    feature_mean=feature_mean,
-    feature_scale=feature_scale,
-    w1=best_params["w1"].astype(np.float32),
-    b1=best_params["b1"].astype(np.float32),
-    w2=best_params["w2"].astype(np.float32),
-    b2=best_params["b2"].astype(np.float32),
-    w3=best_params["w3"].astype(np.float32),
-    b3=best_params["b3"].astype(np.float32),
-    residual_limit=np.asarray([args.residual_limit], dtype=np.float32),
-    output_scale=np.asarray([args.output_scale], dtype=np.float32),
-    ood_gate_start=np.asarray([args.ood_gate_start], dtype=np.float32),
-    ood_gate_width=np.asarray([args.ood_gate_width], dtype=np.float32),
-  )
-  metadata = {
-    "scope": "v12-supervised-causal-mlp-residual",
-    "inspiration": [
-      "karpathy/micrograd: small transparent MLP and explicit backpropagation",
-      "DLR-RM/stable-baselines3: strict evaluation separation and reproducible baselines",
-      "commaai/controls_challenge: official TinyPhysics closed-loop simulator",
-    ],
-    "architecture": [FEATURE_COUNT, args.hidden1, args.hidden2, 1],
-    "seed": args.seed,
-    "train_segments": train_segments,
-    "validation_segments": validation_segments,
-    "training": {
-      "epochs": args.epochs,
-      "batch_size": args.batch_size,
-      "learning_rate": args.learning_rate,
-      "weight_decay": args.weight_decay,
-      "gradient_clip": args.gradient_clip,
-      "residual_limit": args.residual_limit,
-      "output_scale": args.output_scale,
-      "ood_gate_start": args.ood_gate_start,
-      "ood_gate_width": args.ood_gate_width,
-    },
-    "teacher_baseline_train": rollout_summary(train_records),
-    "teacher_baseline_validation": rollout_summary(val_records),
-    "train_prediction": prediction_metrics(train_y, train_prediction),
-    "validation_prediction": prediction_metrics(val_y, val_prediction),
-    "best_validation_loss": best_val,
-    "history": history,
-    "model": str(output),
-  }
-  output.with_suffix(".json").write_text(
-    json.dumps(metadata, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-  )
-  print(json.dumps({
-    "architecture": metadata["architecture"],
-    "train_prediction": metadata["train_prediction"],
-    "validation_prediction": metadata["validation_prediction"],
-    "model": str(output),
-  }, sort_keys=True))
-
-
-if __name__ == "__main__":
-  parser = argparse.ArgumentParser()
-  parser.add_argument("--official-dir", default="official")
-  parser.add_argument("--controller-source", default="compute/riyadh_general.py")
-  parser.add_argument("--inverse-model", required=True)
-  parser.add_argument("--output", default="checkpoints/general/models/v12-mlp-residual.npz")
-  parser.add_argument("--train-start", type=int, default=20500)
-  parser.add_argument("--train-count", type=int, default=200)
-  parser.add_argument("--validation-start", type=int, default=21000)
-  parser.add_argument("--validation-count", type=int, default=50)
-  parser.add_argument("--hidden1", type=int, default=32)
-  parser.add_argument("--hidden2", type=int, default=16)
-  parser.add_argument("--epochs", type=int, default=24)
-  parser.add_argument("--batch-size", type=int, default=2048)
-  parser.add_argument("--learning-rate", type=float, default=0.002)
-  parser.add_argument("--weight-decay", type=float, default=1e-4)
-  parser.add_argument("--gradient-clip", type=float, default=1.0)
-  parser.add_argument("--residual-limit", type=float, default=0.15)
-  parser.add_argument("--output-scale", type=float, default=0.50)
-  parser.add_argument("--ood-gate-start", type=float, default=4.0)
-  parser.add_argument("--ood-gate-width", type=float, default=2.0)
-  parser.add_argument("--beta1", type=float, default=0.9)
-  parser.add_argument("--beta2", type=float, default=0.999)
-  parser.add_argument("--seed", type=int, default=20260720)
-  main(parser.parse_args())
+if __name__=="__main__":
+  p=argparse.ArgumentParser(); p.add_argument("--official-dir",default="official"); p.add_argument("--controller-source",default="compute/riyadh_general.py"); p.add_argument("--inverse-model",required=True); p.add_argument("--output",default="checkpoints/general/models/v12-mlp-residual.npz"); p.add_argument("--train-start",type=int,default=12000); p.add_argument("--train-count",type=int,default=200); p.add_argument("--validation-start",type=int,default=12300); p.add_argument("--validation-count",type=int,default=50); p.add_argument("--sample-start",type=int,default=20); p.add_argument("--sample-stop",type=int,default=80); p.add_argument("--hidden1",type=int,default=32); p.add_argument("--hidden2",type=int,default=16); p.add_argument("--epochs",type=int,default=24); p.add_argument("--batch-size",type=int,default=2048); p.add_argument("--learning-rate",type=float,default=.002); p.add_argument("--weight-decay",type=float,default=1e-4); p.add_argument("--gradient-clip",type=float,default=1.0); p.add_argument("--residual-limit",type=float,default=.15); p.add_argument("--output-scale",type=float,default=.5); p.add_argument("--ood-gate-start",type=float,default=4.0); p.add_argument("--ood-gate-width",type=float,default=2.0); p.add_argument("--beta1",type=float,default=.9); p.add_argument("--beta2",type=float,default=.999); p.add_argument("--seed",type=int,default=20260720); main(p.parse_args())
