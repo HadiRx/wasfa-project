@@ -7,6 +7,8 @@ on:
     paths:
       - compute/riyadh_v13_cma.py
       - compute/optimize_v13b_cma.py
+      - compute/verify_v13_500.py
+      - results/latest-v13-verification-500.json
       - .github/workflows/v13b-refinement.yml
 
 permissions:
