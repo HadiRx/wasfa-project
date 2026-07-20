@@ -1,0 +1,161 @@
+name: Natural-20 V13-C Submission Package
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [controls-challenge-compute]
+    paths:
+      - compute/build_v13c_submission.py
+      - docs/controls_challenge/V13C_FINAL_TECHNICAL_REPORT.md
+      - .github/workflows/v13c-submission-package.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: natural20-v13c-submission-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-submission:
+    runs-on: ubuntu-latest
+    timeout-minutes: 420
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkout official controls challenge
+        run: |
+          git clone https://github.com/commaai/controls_challenge.git official
+          git -C official rev-parse HEAD > official_commit.txt
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install runtime
+        run: python -m pip install --upgrade pip pandas numpy onnxruntime matplotlib seaborn tqdm cmaes
+
+      - name: Download official dataset
+        working-directory: official
+        run: python -c "from tinyphysics import download_dataset; download_dataset()"
+
+      - name: Reproduce frozen V10, V13-A, and V13-C
+        run: |
+          python -u compute/train_warmup_inverse.py \
+            --data-dir official/data \
+            --train-start 0 --train-count 5000 \
+            --validation-start 10000 --validation-count 500 \
+            --output official/models/riyadh_inverse_linear.npz
+
+          mkdir -p checkpoints/general/v10-scale-models checkpoints/general/v10-scale-dev checkpoints/general/models
+          python -u compute/evaluate_general_policy.py --official-dir official --controller-source compute/riyadh_v13_cma.py --disable-model --quiet --unseen-start 16500 --unseen-count 100 --output checkpoints/general/v10-v8-dev.json
+
+          for scale in 0.25 0.40 0.55 0.70 0.80 1.00; do
+            label=${scale/./p}
+            python compute/package_closed_loop_residual.py \
+              --source checkpoints/general/models/v10-closed-loop-conservative.npz \
+              --output checkpoints/general/v10-scale-models/v10-scale-${label}.npz \
+              --output-scale ${scale}
+            python -u compute/evaluate_general_policy.py \
+              --official-dir official \
+              --controller-source compute/riyadh_v13_cma.py \
+              --model checkpoints/general/v10-scale-models/v10-scale-${label}.npz \
+              --unseen-start 16500 --unseen-count 100 --quiet \
+              --output checkpoints/general/v10-scale-dev/v10-scale-${label}.json
+          done
+
+          python compute/select_general_candidate.py \
+            --baseline checkpoints/general/v10-v8-dev.json \
+            --candidate 0.25=checkpoints/general/v10-scale-dev/v10-scale-0p25.json=checkpoints/general/v10-scale-models/v10-scale-0p25.npz \
+            --candidate 0.40=checkpoints/general/v10-scale-dev/v10-scale-0p40.json=checkpoints/general/v10-scale-models/v10-scale-0p40.npz \
+            --candidate 0.55=checkpoints/general/v10-scale-dev/v10-scale-0p55.json=checkpoints/general/v10-scale-models/v10-scale-0p55.npz \
+            --candidate 0.70=checkpoints/general/v10-scale-dev/v10-scale-0p70.json=checkpoints/general/v10-scale-models/v10-scale-0p70.npz \
+            --candidate 0.80=checkpoints/general/v10-scale-dev/v10-scale-0p80.json=checkpoints/general/v10-scale-models/v10-scale-0p80.npz \
+            --candidate 1.00=checkpoints/general/v10-scale-dev/v10-scale-1p00.json=checkpoints/general/v10-scale-models/v10-scale-1p00.npz \
+            --output-model checkpoints/general/models/v10-selected.npz \
+            --output-scale checkpoints/general/v10-selected-scale.txt \
+            --output-report checkpoints/general/v10-selection.json
+
+          python -u compute/optimize_v13_cma.py \
+            --official-dir official \
+            --controller-source compute/riyadh_v13_cma.py \
+            --inverse-model official/models/riyadh_inverse_linear.npz \
+            --baseline-model checkpoints/general/models/v10-selected.npz \
+            --start 13500 --count 48 --batch 12 \
+            --population 10 --generations 12 --finalists 5 \
+            --sigma 0.65 --seed 20260720 \
+            --output-model checkpoints/general/models/v13a-frozen.npz \
+            --output-report checkpoints/general/v13a-reproduction.json
+
+          python -u compute/optimize_v13c_cma.py \
+            --official-dir official \
+            --controller-source compute/riyadh_v13_cma.py \
+            --inverse-model official/models/riyadh_inverse_linear.npz \
+            --baseline-model checkpoints/general/models/v13a-frozen.npz \
+            --start 16000 --count 96 --batch 16 \
+            --population 12 --generations 16 --finalists 6 \
+            --sigma 0.16 --seed 20260722 \
+            --guard-segments 15692,15338,15377,15273,15297,15029,15199,15166 \
+            --output-model checkpoints/general/models/v13c-frozen.npz \
+            --output-report checkpoints/general/v13c-reproduction.json
+
+      - name: Install submission controller into official tree
+        run: |
+          cp compute/riyadh_v13_cma.py official/controllers/riyadh_v13c.py
+          cp checkpoints/general/models/v13c-frozen.npz official/models/riyadh_general_policy.npz
+          cp official/models/riyadh_inverse_linear.npz official/models/riyadh_inverse_linear.npz.tmp
+          mv official/models/riyadh_inverse_linear.npz.tmp official/models/riyadh_inverse_linear.npz
+
+      - name: Run official 5000-segment submission evaluation
+        working-directory: official
+        run: python -u eval.py --model_path ./models/tinyphysics.onnx --data_path ./data --num_segs 5000 --test_controller riyadh_v13c --baseline_controller pid
+
+      - name: Verify official report exists
+        run: |
+          test -s official/report.html
+          grep -q "riyadh_v13c" official/report.html || true
+
+      - name: Build frozen package and integrity manifest
+        run: |
+          OFFICIAL_COMMIT=$(cat official_commit.txt)
+          python -u compute/build_v13c_submission.py \
+            --controller compute/riyadh_v13_cma.py \
+            --policy-model checkpoints/general/models/v13c-frozen.npz \
+            --inverse-model official/models/riyadh_inverse_linear.npz \
+            --report-html official/report.html \
+            --verification-1000 results/latest-v13c-verification-1000.json \
+            --verification-5000 results/latest-v13c-verification-5000.json \
+            --v13c-summary results/latest-v13c-summary.json \
+            --commit ${{ github.sha }} \
+            --official-commit "$OFFICIAL_COMMIT" \
+            --output submission/Riyadh-Natural20-V13C
+          cp docs/controls_challenge/V13C_FINAL_TECHNICAL_REPORT.md submission/Riyadh-Natural20-V13C/TECHNICAL_REPORT.md
+          cd submission
+          zip -r Riyadh-Natural20-V13C-Submission.zip Riyadh-Natural20-V13C
+
+      - name: Upload final submission package
+        uses: actions/upload-artifact@v4
+        with:
+          name: Riyadh-Natural20-V13C-Official-Submission
+          path: |
+            submission/Riyadh-Natural20-V13C-Submission.zip
+            submission/Riyadh-Natural20-V13C/
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Publish package metadata
+        if: always() && github.event_name == 'push'
+        run: |
+          mkdir -p results
+          if [ -f submission/Riyadh-Natural20-V13C/MANIFEST.json ]; then
+            cp submission/Riyadh-Natural20-V13C/MANIFEST.json /tmp/latest-v13c-submission-manifest.json
+            git fetch origin controls-challenge-compute
+            git checkout -B controls-challenge-compute origin/controls-challenge-compute
+            mkdir -p results
+            cp /tmp/latest-v13c-submission-manifest.json results/latest-v13c-submission-manifest.json
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions-bot@users.noreply.github.com"
+            git add results/latest-v13c-submission-manifest.json
+            if git diff --cached --quiet; then echo no-change; else git commit -m "Record frozen V13-C submission manifest [skip ci]"; git push origin HEAD:controls-challenge-compute; fi
+          fi
