@@ -1,0 +1,36 @@
+name: HadiRx Model Data Guard
+
+on:
+  pull_request:
+    paths:
+      - 'model_data/**'
+      - 'scripts/validate_hadirx_model_data.py'
+      - 'requirements-model.txt'
+      - '.github/workflows/hadirx-model-data.yml'
+  push:
+    branches: [hadirx-model-v1]
+    paths:
+      - 'model_data/**'
+      - 'scripts/validate_hadirx_model_data.py'
+      - 'requirements-model.txt'
+      - '.github/workflows/hadirx-model-data.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-model-data:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - name: Install validator dependencies
+        run: python -m pip install -r requirements-model.txt
+      - name: Validate governed seed data
+        run: |
+          python scripts/validate_hadirx_model_data.py \
+            model_data/examples/seed_cases.jsonl
