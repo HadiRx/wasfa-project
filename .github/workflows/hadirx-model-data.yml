@@ -28,6 +28,7 @@ jobs:
         with:
           python-version: '3.11'
           cache: pip
+          cache-dependency-path: requirements-model.txt
       - name: Install validator dependencies
         run: python -m pip install -r requirements-model.txt
       - name: Validate governed seed data
