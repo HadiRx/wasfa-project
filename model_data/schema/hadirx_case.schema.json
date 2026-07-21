@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hadirx.com/schemas/hadirx_case.schema.json",
+  "title": "HadiRx governed model case",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "case_id",
+    "language",
+    "origin",
+    "split",
+    "input",
+    "gold",
+    "evidence",
+    "governance"
+  ],
+  "properties": {
+    "case_id": {"type": "string", "pattern": "^HRX-[A-Z0-9_-]{6,64}$"},
+    "language": {"enum": ["ar", "en", "mixed"]},
+    "origin": {"enum": ["synthetic", "expert_authored", "field_no_phi"]},
+    "split": {"enum": ["train", "dev", "test"]},
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["medication", "diagnosis", "available_context"],
+      "properties": {
+        "medication": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["display_name"],
+          "properties": {
+            "display_name": {"type": "string", "minLength": 1, "maxLength": 240},
+            "active_ingredient": {"type": ["string", "null"], "maxLength": 240},
+            "code": {"type": ["string", "null"], "maxLength": 120}
+          }
+        },
+        "diagnosis": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["display_name"],
+          "properties": {
+            "display_name": {"type": "string", "minLength": 1, "maxLength": 400},
+            "icd10am_code": {"type": ["string", "null"], "maxLength": 32}
+          }
+        },
+        "available_context": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1, "maxLength": 1000},
+          "maxItems": 50
+        },
+        "setting": {"type": ["string", "null"], "maxLength": 120}
+      }
+    },
+    "gold": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["signal", "missing_elements", "routing", "rationale"],
+      "properties": {
+        "signal": {"enum": ["context_present", "documentation_gap", "requires_review"]},
+        "missing_elements": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1, "maxLength": 500},
+          "uniqueItems": true
+        },
+        "routing": {
+          "type": "array",
+          "items": {"enum": ["pharmacy", "physician", "approvals", "rcm", "payer_policy_review", "multidisciplinary_review"]},
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "rationale": {"type": "string", "minLength": 10, "maxLength": 4000},
+        "abstain_expected": {"type": "boolean", "default": false}
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["positive_ids", "hard_negative_ids"],
+      "properties": {
+        "positive_ids": {
+          "type": "array",
+          "items": {"type": "string", "pattern": "^[A-Za-z0-9._:/-]{3,200}$"},
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "hard_negative_ids": {
+          "type": "array",
+          "items": {"type": "string", "pattern": "^[A-Za-z0-9._:/-]{3,200}$"},
+          "uniqueItems": true
+        }
+      }
+    },
+    "governance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["phi_free", "review_status", "annotator_id", "source_family"],
+      "properties": {
+        "phi_free": {"const": true},
+        "review_status": {"enum": ["draft", "single_reviewed", "dual_reviewed", "adjudicated"]},
+        "annotator_id": {"type": "string", "pattern": "^[A-Za-z0-9_-]{2,80}$"},
+        "second_reviewer_id": {"type": ["string", "null"], "pattern": "^[A-Za-z0-9_-]{2,80}$"},
+        "source_family": {"type": "string", "minLength": 2, "maxLength": 120},
+        "scenario_family": {"type": "string", "minLength": 2, "maxLength": 120},
+        "created_at": {"type": "string", "format": "date-time"},
+        "notes": {"type": ["string", "null"], "maxLength": 2000}
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"split": {"const": "test"}}},
+      "then": {
+        "properties": {
+          "origin": {"not": {"const": "synthetic"}},
+          "governance": {
+            "properties": {
+              "review_status": {"enum": ["dual_reviewed", "adjudicated"]}
+            }
+          }
+        }
+      }
+    }
+  ]
+}
