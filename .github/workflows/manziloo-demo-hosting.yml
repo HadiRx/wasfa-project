@@ -1,0 +1,38 @@
+name: Build Manziloo ChatGPT Demo
+
+on:
+  push:
+    branches: [manziloo-demo-hosting]
+    paths-ignore:
+      - manziloo-chatgpt-demo.mp4
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-demo:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: manziloo-demo-hosting
+      - name: Install video dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg fonts-dejavu-core
+          python -m pip install --upgrade pip
+          pip install pillow arabic-reshaper python-bidi
+      - name: Generate review demo
+        run: python tools/generate_manziloo_demo.py
+      - name: Commit generated MP4
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add manziloo-chatgpt-demo.mp4
+          if git diff --cached --quiet; then
+            echo 'No video changes to commit.'
+            exit 0
+          fi
+          git commit -m 'chore: publish Manziloo OpenAI review demo'
+          git push origin HEAD:manziloo-demo-hosting
